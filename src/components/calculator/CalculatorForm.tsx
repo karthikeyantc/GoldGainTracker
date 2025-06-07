@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,9 +24,9 @@ const iconProps = { className: "mr-2 h-4 w-4 text-accent" };
 
 export function CalculatorForm({ inputs, onInputChange, onSubmit, isLoading }: CalculatorFormProps) {
   const inputFields = [
-    { id: 'monthlyInvestment', label: 'Monthly Investment (₹)', type: 'number', placeholder: 'e.g., 5000', value: inputs.monthlyInvestment, icon: <Coins {...iconProps} /> },
+    { id: 'monthlyInvestment', label: 'Monthly Investment (₹)', type: 'number', placeholder: 'e.g., ₹5000', value: inputs.monthlyInvestment, icon: <Coins {...iconProps} /> },
     { id: 'monthsPaid', label: 'Months Paid', type: 'number', placeholder: 'e.g., 11', value: inputs.monthsPaid, icon: <CalendarDays {...iconProps} /> },
-    { id: 'currentGoldPrice', label: 'Current Gold Price (₹/gram)', type: 'number', placeholder: 'e.g., 7000', value: inputs.currentGoldPrice, icon: <CircleDollarSign {...iconProps} /> },
+    { id: 'currentGoldPrice', label: 'Current Gold Price (₹/gram)', type: 'number', placeholder: 'e.g., ₹7000', value: inputs.currentGoldPrice, icon: <CircleDollarSign {...iconProps} /> },
     { id: 'intendedJewelleryWeight', label: 'Intended Jewellery Weight (grams)', type: 'number', placeholder: 'e.g., 10', value: inputs.intendedJewelleryWeight, icon: <Gem {...iconProps} /> },
     { id: 'makingChargePercentage', label: 'Making Charge (%)', type: 'number', placeholder: 'e.g., 10', value: inputs.makingChargePercentage, icon: <Percent {...iconProps} /> },
   ];

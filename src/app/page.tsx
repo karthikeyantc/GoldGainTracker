@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -90,34 +91,40 @@ export default function GoldenGainTrackerPage() {
     setTimeout(() => {
       const totalInvested = mi * mp;
       const accumulatedGoldGrams = totalInvested / cgp;
+      
       const jewelleryBaseCost = ijw * cgp;
       const makingChargesRaw = (mcp / 100) * jewelleryBaseCost;
       
-      // Scheme discount: 1 month's investment, capped by making charges
-      const schemeDiscountOnMakingCharges = Math.min(mi, makingChargesRaw);
-      
-      const finalMakingCharges = makingChargesRaw - schemeDiscountOnMakingCharges;
-      const netTaxableValue = jewelleryBaseCost + finalMakingCharges;
-      const finalGst = GST_RATE * netTaxableValue;
-      const finalPayable = netTaxableValue + finalGst;
-
-      // For Gross Invoice Total display
+      // Gross bill calculation (before scheme discount is subtracted from the total)
       const subTotalBeforeGst = jewelleryBaseCost + makingChargesRaw;
-      const gstOnSubtotal = GST_RATE * subTotalBeforeGst;
-      const grossInvoiceTotal = subTotalBeforeGst + gstOnSubtotal;
+      const gstOnGrossSubTotal = GST_RATE * subTotalBeforeGst; // Tax on the full undiscounted amount
+      const grossInvoiceTotal = subTotalBeforeGst + gstOnGrossSubTotal;
+
+      // Scheme discount value: 1 month's investment, capped by making charges (raw)
+      const schemeDiscountValue = Math.min(mi, makingChargesRaw);
+
+      // Final payable amount: Gross total MINUS the scheme discount value
+      const finalPayable = grossInvoiceTotal - schemeDiscountValue;
+      
+      // For display consistency in CalculatorResults:
+      // "Final Making Charges" can represent the conceptual net cost of making charges to the customer.
+      const effectiveFinalMakingCharges = makingChargesRaw - schemeDiscountValue;
+      // "Final GST" refers to the GST component of the grossInvoiceTotal, as discount is post-total.
+      const gstAppliedInBill = gstOnGrossSubTotal;
 
       setCalculationResults({
         accumulatedGoldGrams,
         totalInvested,
         jewelleryBaseCost,
         makingChargesRaw,
-        subTotalBeforeGst,
-        gstOnSubtotal,
-        grossInvoiceTotal,
-        schemeDiscountOnMakingCharges,
-        finalMakingCharges,
-        finalGst,
-        finalPayable,
+        subTotalBeforeGst,          // Gross subtotal before any discount
+        gstOnSubtotal: gstAppliedInBill, // GST calculated on the gross subtotal
+        grossInvoiceTotal,          // Gross total before discount subtraction
+
+        schemeDiscountOnMakingCharges: schemeDiscountValue, // The discount amount itself
+        finalMakingCharges: effectiveFinalMakingCharges,     // Net effect on making charges for display
+        finalGst: gstAppliedInBill,                         // GST remains on the gross amount, as discount is post-total
+        finalPayable,                                       // Final bill: Gross Total - Discount Value
       });
       setIsCalculating(false);
     }, 500);
@@ -253,3 +260,4 @@ export default function GoldenGainTrackerPage() {
     </div>
   );
 }
+

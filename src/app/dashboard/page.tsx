@@ -6,11 +6,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ThemeToggle } from "@/components/theme-toggle";
 import Link from 'next/link';
+import { PlusCircle } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { user, loading, signOutUser } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -29,40 +29,30 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-4 md:p-8">
-      <header className="mb-12">
-        <div className="flex justify-between items-center">
-          <h1 className="font-headline text-4xl md:text-5xl font-bold text-primary">
-            My Dashboard
-          </h1>
-          <div className="flex items-center space-x-2">
-            <ThemeToggle />
-            <Button variant="outline" onClick={signOutUser}>Logout</Button>
-             <Button variant="ghost" asChild>
-                <Link href="/">Calculator</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+    <>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="font-headline text-3xl md:text-4xl font-bold text-primary">
+          Welcome, {user.displayName || user.email}!
+        </h1>
+        <Button asChild>
+          <Link href="/dashboard/create-scheme">
+            <PlusCircle className="mr-2 h-5 w-5" /> Create New Scheme
+          </Link>
+        </Button>
+      </div>
       
-      <main>
-        <Card className="w-full max-w-2xl mx-auto shadow-xl">
-          <CardHeader>
-            <CardTitle className="font-headline text-2xl">Welcome, {user.displayName || user.email}!</CardTitle>
-            <CardDescription>This is your personal investment tracking area.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p>Your UID: {user.uid}</p>
-            <p className="mt-4">
-              More features coming soon, including creating and managing your investment schemes!
-            </p>
-          </CardContent>
-        </Card>
-      </main>
-
-      <footer className="text-center mt-16 py-8 border-t border-border text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} GoldenGain Tracker. All rights reserved.</p>
-      </footer>
-    </div>
+      <Card className="w-full shadow-xl">
+        <CardHeader>
+          <CardTitle className="font-headline text-2xl">Your Investment Schemes</CardTitle>
+          <CardDescription>View and manage your gold investment schemes here.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">
+            You don't have any schemes yet. Click "Create New Scheme" to get started.
+          </p>
+          {/* Scheme list will go here later */}
+        </CardContent>
+      </Card>
+    </>
   );
 }

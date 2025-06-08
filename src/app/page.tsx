@@ -5,12 +5,12 @@ import React, { useState, useCallback } from 'react';
 import { CalculatorForm, type CalculatorInputState } from '@/components/calculator/CalculatorForm';
 import { CalculatorResults, type CalculationResults } from '@/components/calculator/CalculatorResults';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle as UICardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 import { GST_RATE, MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD, STANDARD_DISCOUNT_RATE_CAP } from '@/lib/constants';
 import { useToast } from "@/hooks/use-toast";
-import { Calculator, Gem, FileText, Activity, BookOpen, ListChecks, LogIn, LogOut, LayoutDashboard } from 'lucide-react';
+import { Calculator, Gem, FileText, Activity, BookOpen, LogIn, LogOut, LayoutDashboard } from 'lucide-react';
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
@@ -148,7 +148,7 @@ export default function GoldenGainTrackerPage() {
       breakdown_gst,
     });
     setIsCalculating(false);
-  }, [calculatorInputs, toast, GST_RATE, MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD, STANDARD_DISCOUNT_RATE_CAP]);
+  }, [calculatorInputs, toast]);
 
   return (
     <div className="min-h-screen bg-background text-foreground p-4 md:p-8">
@@ -232,10 +232,10 @@ export default function GoldenGainTrackerPage() {
                 <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
                     <Card>
                         <CardHeader>
-                            <UICardTitle className="flex flex-row items-center justify-between space-y-0 pb-2 text-sm font-medium text-muted-foreground">
+                            <CardTitle className="flex flex-row items-center justify-between space-y-0 pb-2 text-sm font-medium text-muted-foreground">
                                 Calculation Summary
                                 <FileText className="h-5 w-5 text-accent" />
-                            </UICardTitle>
+                            </CardTitle>
                         </CardHeader>
                         <CardContent className="text-sm text-muted-foreground space-y-2">
                             <p>• Your accumulated gold {formatNumber(calculationResults.inputAccumulatedGoldGrams, 3)}g worth {formatCurrency(calculationResults.yourGoldValue)}.</p>
@@ -256,10 +256,10 @@ export default function GoldenGainTrackerPage() {
                     </Card>
                      <Card className="bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700">
                         <CardHeader>
-                             <UICardTitle className="flex flex-row items-center justify-between space-y-0 pb-2 text-sm font-medium text-green-700 dark:text-green-300">
+                             <CardTitle className="flex flex-row items-center justify-between space-y-0 pb-2 text-sm font-medium text-green-700 dark:text-green-300">
                                 Your Gold Portfolio Summary
                                 <Activity className="h-5 w-5 text-green-600 dark:text-green-400" />
-                            </UICardTitle>
+                            </CardTitle>
                         </Header>
                         <CardContent className="space-y-2">
                             <div>
@@ -278,10 +278,10 @@ export default function GoldenGainTrackerPage() {
                     </Card>
                      <Card>
                         <CardHeader>
-                            <UICardTitle className="flex flex-row items-center justify-between space-y-0 pb-2 text-sm font-medium text-muted-foreground">
+                            <CardTitle className="flex flex-row items-center justify-between space-y-0 pb-2 text-sm font-medium text-muted-foreground">
                                 How This Calculator Works Guide
                                 <BookOpen className="h-5 w-5 text-accent" />
-                            </UICardTitle>
+                            </CardTitle>
                         </CardHeader>
                         <CardContent className="text-sm text-muted-foreground space-y-1">
                            <p>• Your scheme offers a potential making charge discount rate equal to {MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD*100}% of the input jewellery's making charge percentage.</p>
@@ -306,5 +306,4 @@ export default function GoldenGainTrackerPage() {
     </div>
   );
 }
-
     

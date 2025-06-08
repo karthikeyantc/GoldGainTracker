@@ -1,29 +1,26 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { StatCard } from '@/components/shared/StatCard'; // Might not be used as much with new layout
-import { Gem, Gift, TrendingUp, ChevronsUp, FileText, ShieldCheck, Percent } from 'lucide-react'; // Adjusted icons
-import { MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD } from '@/lib/constants';
+import { Gem, TrendingUp, FileText } from 'lucide-react'; 
+import { MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD, MAKING_CHARGE_DISCOUNT_CAP_PERCENTAGE_OF_TOTAL_INVOICE } from '@/lib/constants';
 
 export interface CalculationResults {
-  // Pass through inputs for display in summary
   inputAccumulatedGoldGrams: number;
   inputIntendedJewelleryWeight: number;
   inputCurrentGoldPrice: number;
   inputMakingChargePercentage: number;
+  isPrematureRedemption: boolean; // New
+  appliedMakingChargeDiscountCapPercentage: number; // New: The actual cap % used (e.g., 12% or user-set premature cap)
 
-  // Calculation Results section
   yourGoldValue: number;
   additionalGoldGrams: number;
   additionalGoldValue: number;
 
-  // Gold Analysis section
   goldAnalysisYouHaveGrams: number;
   goldAnalysisYouHaveWorth: number;
   goldAnalysisNeedAdditionalGrams: number;
   goldAnalysisNeedAdditionalWorth: number;
 
-  // Complete Invoice Breakdown
   invoiceBaseJewelleryCost: number;
   invoiceMakingCharges: number;
   invoiceSubtotalBeforeGst: number;
@@ -115,7 +112,7 @@ export function CalculatorResults({ results, formatCurrency, formatNumber }: Cal
         <CardContent className="space-y-4">
           <div>
             <h4 className="font-semibold text-accent mb-1">Step 1: Base Jewelry Cost</h4>
-            <DetailRow label={`Total Jewelry (${formatNumber(results.inputIntendedJewelleryWeight,3)}g)`} value={formatCurrency(results.invoiceBaseJewelleryCost)} />
+            <DetailRow label={`Total Jewelry (${formatNumber(results.inputIntendedJewelleryWeight,3)}g @ ${formatCurrency(results.inputCurrentGoldPrice)}/g)`} value={formatCurrency(results.invoiceBaseJewelleryCost)} />
             <DetailRow label={`Making Charges (${results.inputMakingChargePercentage}%)`} value={formatCurrency(results.invoiceMakingCharges)} />
             <DetailRow label="Subtotal Before GST" value={formatCurrency(results.invoiceSubtotalBeforeGst)} />
           </div>
@@ -129,7 +126,10 @@ export function CalculatorResults({ results, formatCurrency, formatNumber }: Cal
           <div className="p-4 bg-green-50 dark:bg-green-900/30 rounded-md border border-green-200 dark:border-green-700">
             <h4 className="font-semibold text-green-700 dark:text-green-300 mb-1">Step 3: Apply Deductions</h4>
             <DetailRow label="Your Gold Value Deduction" value={`-${formatCurrency(results.invoiceGoldValueDeduction)}`} />
-            <DetailRow label={`Making Charge Discount (${mcDiscountPercentageDisplay}% on your gold portion)`} value={`-${formatCurrency(results.invoiceMakingChargeDiscount)}`} />
+            <DetailRow 
+              label={`Making Charge Discount (${mcDiscountPercentageDisplay}% on your gold portion, capped at ${formatNumber(results.appliedMakingChargeDiscountCapPercentage,0)}%${results.isPrematureRedemption ? " - Premature" : ""})`} 
+              value={`-${formatCurrency(results.invoiceMakingChargeDiscount)}`} 
+            />
             <DetailRow label="Total Savings" value={formatCurrency(results.invoiceTotalSavings)} />
           </div>
            <div className="text-center pt-2">

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Gem, TrendingUp, FileText, ListChecks, BookOpen } from 'lucide-react'; // Changed BarChartIcon to ListChecks
+import { Gem, TrendingUp, FileText, ListChecks, BookOpen } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 import { MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD, STANDARD_DISCOUNT_RATE_CAP } from '@/lib/constants';
@@ -12,7 +12,8 @@ export interface CalculationResults {
   inputCurrentGoldPrice: number;
   inputMakingChargePercentage: number;
   isPrematureRedemption: boolean;
-  appliedMakingChargeDiscountCapPercentage: number;
+  appliedMakingChargeDiscountCapPercentage: number; // The cap rate (e.g., 12% or user-selected premature %)
+  actualAppliedDiscountRate: number; // The final rate (e.g. 0.12 or 0.11) after Math.min
 
   yourGoldValue: number;
   additionalGoldGrams: number;
@@ -57,29 +58,28 @@ const DetailRow: React.FC<{ label: string; value: string; isEmphasized?: boolean
 
 export function CalculatorResults({ results, formatCurrency, formatNumber }: CalculatorResultsProps) {
   if (!results) return null;
-
-  const potentialDiscountRateFromMc = (results.inputMakingChargePercentage / 100) * MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD;
-  const actualAppliedRate = Math.min(potentialDiscountRateFromMc, results.appliedMakingChargeDiscountCapPercentage / 100);
   
+  const potentialRawDiscountRate = (results.inputMakingChargePercentage / 100) * MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD;
+
   const howItWorksItems = [
     {
-      trigger: "How is the Making Charge Discount Rate determined?",
-      content: `The scheme offers a discount rate that is ${formatNumber(MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD * 100, 0)}% of the making charge percentage you enter for your jewellery. For example, if your making charge is ${formatNumber(results.inputMakingChargePercentage,1)}%, the scheme's potential discount rate is ${formatNumber(potentialDiscountRateFromMc * 100, 2)}%.`
+      trigger: "1. What's the scheme's potential discount rate?",
+      content: `The scheme offers a discount rate equal to ${formatNumber(MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD * 100, 0)}% of the making charge percentage you enter. With your input MC of ${formatNumber(results.inputMakingChargePercentage,1)}%, this scheme's potential discount rate is ${formatNumber(potentialRawDiscountRate * 100, 2)}%.`
     },
     {
-      trigger: "Is there a cap on this discount rate?",
-      content: `Yes. This potential rate is then capped. For standard redemptions, the rate is capped at ${formatNumber(STANDARD_DISCOUNT_RATE_CAP * 100, 0)}%. For premature redemptions, the cap was ${formatNumber(results.appliedMakingChargeDiscountCapPercentage, 0)}% (user-adjustable). The final rate applied is the lower of the scheme's potential rate (${formatNumber(potentialDiscountRateFromMc * 100, 2)}%) and this cap (${formatNumber(results.appliedMakingChargeDiscountCapPercentage, 0)}%), resulting in an actual applied rate of ${formatNumber(actualAppliedRate * 100, 2)}%.`
+      trigger: "2. Is there a cap on this discount rate?",
+      content: `Yes. This potential rate (${formatNumber(potentialRawDiscountRate * 100, 2)}%) is then capped. For standard redemptions, the cap is ${formatNumber(STANDARD_DISCOUNT_RATE_CAP * 100, 0)}%. For premature redemptions, the cap was ${formatNumber(results.appliedMakingChargeDiscountCapPercentage, 0)}%. The final effective rate applied to your gold value is the lower of the scheme's potential rate and this cap, resulting in an actual applied rate of ${formatNumber(results.actualAppliedDiscountRate * 100, 2)}%.`
     },
     {
-      trigger: "How is the discount amount calculated from this rate?",
-      content: `This final capped discount rate (${formatNumber(actualAppliedRate * 100, 2)}%) is applied to the total value of your accumulated gold (${formatCurrency(results.yourGoldValue)}) to determine an initial discount amount.`
+      trigger: "3. How is the discount amount calculated from this rate?",
+      content: `This final capped discount rate (${formatNumber(results.actualAppliedDiscountRate * 100, 2)}%) is applied to the total value of your accumulated gold (${formatCurrency(results.yourGoldValue)}) to determine an initial discount amount of ${formatCurrency(results.actualAppliedDiscountRate * results.yourGoldValue)}.`
     },
     {
-      trigger: "Are there practical limits to this discount?",
-      content: `Yes, the calculated discount amount is further limited. It cannot be more than the making charges that would apply to your accumulated gold portion if it were part of the new jewellery. Additionally, it cannot exceed the total making charges (${formatCurrency(results.invoiceMakingCharges)}) for the entire new jewellery item you are purchasing. The final discount applied (${formatCurrency(results.invoiceMakingChargeDiscount)}) respects these limits.`
+      trigger: "4. Are there practical limits to this discount amount?",
+      content: `Yes, this calculated discount amount is further limited. Firstly, it cannot be more than the making charges that would apply to your accumulated gold portion if it were part of the new jewellery. Secondly, it also cannot exceed the total making charges (${formatCurrency(results.invoiceMakingCharges)}) for the entire new jewellery item you are purchasing. The final discount applied (${formatCurrency(results.invoiceMakingChargeDiscount)}) respects these practical limits.`
     },
     {
-      trigger: "How is the final payable amount calculated?",
+      trigger: "5. How is the final payable amount calculated?",
       content: `The total invoice for your new jewellery (${formatCurrency(results.invoiceTotalInvoice)}) is calculated first (gold cost + total making charges + GST). From this, we deduct the value of your accumulated gold (${formatCurrency(results.invoiceGoldValueDeduction)}) and the final, practically-limited making charge discount (${formatCurrency(results.invoiceMakingChargeDiscount)}) to arrive at the amount you need to pay (${formatCurrency(results.finalAmountToPay)}).`
     }
   ];
@@ -123,8 +123,8 @@ export function CalculatorResults({ results, formatCurrency, formatNumber }: Cal
             <p className="text-lg font-semibold">{formatNumber(results.goldAnalysisYouHaveGrams, 3)} g</p>
             <p className="text-xs text-muted-foreground">Worth {formatCurrency(results.goldAnalysisYouHaveWorth)}</p>
           </div>
-          <div className={`p-3 rounded-md ${results.goldAnalysisNeedAdditionalGrams > 0 ? 'bg-amber-500/10' : 'bg-green-500/10'}`}>
-            <p className={`text-sm font-medium ${results.goldAnalysisNeedAdditionalGrams > 0 ? 'text-amber-700' : 'text-green-700'}`}>
+          <div className={`p-3 rounded-md ${results.goldAnalysisNeedAdditionalGrams > 0 ? 'bg-amber-500/10 dark:bg-amber-700/20' : 'bg-green-500/10 dark:bg-green-700/20'}`}>
+            <p className={`text-sm font-medium ${results.goldAnalysisNeedAdditionalGrams > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-green-700 dark:text-green-400'}`}>
               {results.goldAnalysisNeedAdditionalGrams > 0 ? 'Need Additional' : (results.goldAnalysisNeedAdditionalGrams === 0 ? 'Exact Amount' : 'Surplus Gold')}
             </p>
             <p className="text-lg font-semibold">{formatNumber(Math.abs(results.goldAnalysisNeedAdditionalGrams), 3)} g</p>
@@ -158,14 +158,14 @@ export function CalculatorResults({ results, formatCurrency, formatNumber }: Cal
             <DetailRow label="Your Gold Value Deduction" value={`-${formatCurrency(results.invoiceGoldValueDeduction)}`} />
             <DetailRow
               label={`Making Charge Discount`}
-              subValue={`(Rate ${formatNumber(actualAppliedRate * 100, 2)}% applied to your gold value, capped by actual MC)`}
+              subValue={`(Rate ${formatNumber(results.actualAppliedDiscountRate * 100, 2)}% on your gold val, capped & limited)`}
               value={`-${formatCurrency(results.invoiceMakingChargeDiscount)}`}
             />
             <DetailRow label="Total Savings" value={formatCurrency(results.invoiceTotalSavings)} />
           </div>
            <div className="text-center pt-2">
             <p className="text-sm text-muted-foreground">Final Amount to Pay</p>
-            <p className="font-headline text-3xl font-bold text-amber-600">{formatCurrency(results.finalAmountToPay)}</p>
+            <p className="font-headline text-3xl font-bold text-amber-600 dark:text-amber-400">{formatCurrency(results.finalAmountToPay)}</p>
           </div>
         </CardContent>
       </Card>
@@ -185,13 +185,16 @@ export function CalculatorResults({ results, formatCurrency, formatNumber }: Cal
               {results.breakdown_mcOnAdditionalGold > 0 && (
                 <DetailRow label="Making Charges (on Additional Gold)" value={formatCurrency(results.breakdown_mcOnAdditionalGold)} />
               )}
-              {results.breakdown_netMcOnAccumulatedGold >= 0 && ( // Can be 0 if MC discount covers all MC on accumulated gold
+              {results.breakdown_netMcOnAccumulatedGold >= 0 && ( 
                    <DetailRow label="Making Charges (on Your Gold Portion, Net of Discount)" value={formatCurrency(results.breakdown_netMcOnAccumulatedGold)} />
               )}
-               <DetailRow label="GST (on Original Invoice)" value={formatCurrency(results.breakdown_gst)} />
+               <DetailRow label="GST (on Original Invoice Subtotal)" value={formatCurrency(results.breakdown_gst)} />
             </div>
             <hr className="my-2 border-dashed border-border" />
             <DetailRow label="Total Payable (Reconciled)" value={formatCurrency(results.finalAmountToPay)} isEmphasized className="text-amber-700 dark:text-amber-500" />
+             <p className="text-xs text-muted-foreground pt-2">
+                Note: The reconciled total is the sum of above components. GST is calculated on the original jewellery subtotal before any gold/MC deductions.
+            </p>
           </CardContent>
         </Card>
       )}
@@ -209,7 +212,7 @@ export function CalculatorResults({ results, formatCurrency, formatNumber }: Cal
                         <AccordionTrigger className="text-sm text-left hover:no-underline text-muted-foreground data-[state=open]:text-primary">
                             {item.trigger}
                         </AccordionTrigger>
-                        <AccordionContent className="text-sm text-foreground/80">
+                        <AccordionContent className="text-sm text-foreground/80 dark:text-foreground/70">
                             {item.content}
                         </AccordionContent>
                     </AccordionItem>
@@ -220,4 +223,3 @@ export function CalculatorResults({ results, formatCurrency, formatNumber }: Cal
     </div>
   );
 }
-

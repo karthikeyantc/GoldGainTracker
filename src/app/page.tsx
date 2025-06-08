@@ -4,18 +4,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { CalculatorForm, type CalculatorInputState } from '@/components/calculator/CalculatorForm';
 import { CalculatorResults, type CalculationResults } from '@/components/calculator/CalculatorResults';
-// Removed: import { InvestmentForecastForm } from '@/components/forecast/InvestmentForecastForm';
-// Removed: import { InvestmentForecastResult } from '@/components/forecast/InvestmentForecastResult';
 import { SectionTitle } from '@/components/shared/SectionTitle';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle as UICardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 import { GST_RATE, MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD, STANDARD_DISCOUNT_RATE_CAP } from '@/lib/constants';
-// Removed: import type { InvestmentForecastInput, InvestmentForecastOutput } from '@/ai/flows/investment-forecast';
-// Removed: import { investmentForecast as generateInvestmentForecast } from '@/ai/flows/investment-forecast';
 import { useToast } from "@/hooks/use-toast";
-import { Calculator, Coins, Gem, Sparkles, Activity, FileTextIcon, PercentIcon, BookOpen } from 'lucide-react'; // Removed BarChartBig
+import { Calculator, Coins, Gem, Sparkles, Activity, FileTextIcon, PercentIcon, BookOpen, ListChecks } from 'lucide-react';
+import { ThemeToggle } from "@/components/theme-toggle";
+
 
 const initialCalculatorInputs: CalculatorInputState = {
   accumulatedGoldGrams: '',
@@ -23,17 +21,15 @@ const initialCalculatorInputs: CalculatorInputState = {
   currentGoldPrice: '',
   makingChargePercentage: '',
   isPrematureRedemption: false,
-  prematureRedemptionCapPercentage: 6, // Default for slider if premature, e.g. 6%
+  prematureRedemptionCapPercentage: 6, 
 };
 
-// Removed: initialForecastInputs
 
 export default function GoldenGainTrackerPage() {
   const [calculatorInputs, setCalculatorInputs] = useState<CalculatorInputState>(initialCalculatorInputs);
   const [calculationResults, setCalculationResults] = useState<CalculationResults | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
 
-  // Removed: forecastInputs, forecastResult, isForecasting state
 
   const { toast } = useToast();
 
@@ -56,7 +52,6 @@ export default function GoldenGainTrackerPage() {
     setCalculationResults(null);
   };
 
-  // Removed: handleForecastInputChange, prefillForecastInputs, handleForecastSubmit
 
   const performCalculations = () => {
     setIsCalculating(true);
@@ -106,6 +101,7 @@ export default function GoldenGainTrackerPage() {
     finalMakingChargeDiscount = Math.min(finalMakingChargeDiscount, makingChargesForInvoice_Raw);
     finalMakingChargeDiscount = Math.max(0, finalMakingChargeDiscount);
 
+
     const totalSavings = goldValueDeduction + finalMakingChargeDiscount;
     let finalAmountToPayCalculated = totalInvoice - totalSavings;
     finalAmountToPayCalculated = Math.max(0, finalAmountToPayCalculated);
@@ -127,6 +123,7 @@ export default function GoldenGainTrackerPage() {
       inputMakingChargePercentage: mcpInput,
       isPrematureRedemption: isPrematureRedemption,
       appliedMakingChargeDiscountCapPercentage: applicableCapRate * 100,
+      actualAppliedDiscountRate: actualAppliedDiscountRate,
 
       yourGoldValue,
       additionalGoldGrams: displayAdditionalGoldGrams,
@@ -159,13 +156,17 @@ export default function GoldenGainTrackerPage() {
   return (
     <div className="min-h-screen bg-background text-foreground p-4 md:p-8">
       <header className="text-center mb-12">
-        <div className="inline-flex items-center">
-           <svg width="48" height="48" viewBox="0 0 24 24" fill="hsl(var(--primary))" xmlns="http://www.w3.org/2000/svg" className="mr-3">
-            <path d="M12 2L14.24 7.68L20 8.71L15.61 12.66L16.92 18.32L12 15.19L7.08 18.32L8.39 12.66L4 8.71L9.76 7.68L12 2ZM12 5.36L10.39 9.84L5.5 10.53L9.04 13.71L7.92 18.16L12 15.88L16.08 18.16L14.96 13.71L18.5 10.53L13.61 9.84L12 5.36Z"/>
-          </svg>
-          <h1 className="font-headline text-5xl font-bold text-primary">
-            GoldenGain Tracker
-          </h1>
+        <div className="flex justify-between items-center mb-2">
+            <div></div> {/*  Spacer */}
+            <div className="inline-flex items-center">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="hsl(var(--primary))" xmlns="http://www.w3.org/2000/svg" className="mr-3">
+                <path d="M12 2L14.24 7.68L20 8.71L15.61 12.66L16.92 18.32L12 15.19L7.08 18.32L8.39 12.66L4 8.71L9.76 7.68L12 2ZM12 5.36L10.39 9.84L5.5 10.53L9.04 13.71L7.92 18.16L12 15.88L16.08 18.16L14.96 13.71L18.5 10.53L13.61 9.84L12 5.36Z"/>
+              </svg>
+              <h1 className="font-headline text-4xl md:text-5xl font-bold text-primary">
+                GoldenGain Tracker
+              </h1>
+            </div>
+            <ThemeToggle />
         </div>
         <p className="text-muted-foreground mt-2 text-lg">
           Plan your gold investments and jewellery purchases with ease.
@@ -173,17 +174,15 @@ export default function GoldenGainTrackerPage() {
       </header>
 
       <Tabs defaultValue="calculator" className="w-full max-w-4xl mx-auto">
-        <TabsList className="grid w-full grid-cols-1 mb-8 bg-accent/10 p-2 rounded-lg"> {/* Changed grid-cols-2 to grid-cols-1 */}
+        <TabsList className="grid w-full grid-cols-1 mb-8 bg-accent/10 p-2 rounded-lg">
           <TabsTrigger value="calculator" className="py-3 text-base data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">
             <Calculator className="mr-2" /> Gold Value Calculator
           </TabsTrigger>
-          {/* Removed: AI Forecast TabsTrigger */}
         </TabsList>
 
         <TabsContent value="calculator">
           <Card className="shadow-xl border-primary/20">
             <CardHeader>
-               {/* Title is now inside CalculatorForm */}
             </CardHeader>
             <CardContent>
               <div className="grid md:grid-cols-2 gap-8">
@@ -198,7 +197,7 @@ export default function GoldenGainTrackerPage() {
                     maxMcDiscountCap={STANDARD_DISCOUNT_RATE_CAP * 100}
                   />
                 </div>
-                <div className="md:mt-[4.25rem]"> {/* Align with button from form */}
+                <div className="md:mt-[4.25rem]"> 
                   {calculationResults ? (
                     <CalculatorResults
                       results={calculationResults}
@@ -229,12 +228,13 @@ export default function GoldenGainTrackerPage() {
                             ) : (
                                 <p>• You have a surplus of {formatNumber(Math.abs(calculationResults.additionalGoldGrams), 3)}g worth {formatCurrency(Math.abs(calculationResults.additionalGoldValue))}.</p>
                             )}
-                            <p>• Potential discount rate from scheme: {formatNumber((calculationResults.inputMakingChargePercentage / 100) * MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD * 100, 1)}% of accumulated gold value.</p>
+                            <p>• Potential discount rate from scheme (50% of input MC %): {formatNumber(((calculationResults.inputMakingChargePercentage / 100) * MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD) * 100, 1)}%.</p>
                              <p>
-                                • This discount rate is capped at {formatNumber(calculationResults.appliedMakingChargeDiscountCapPercentage, 0)}%
+                                • Applicable cap for this rate: {formatNumber(calculationResults.appliedMakingChargeDiscountCapPercentage, 0)}%
                                 {calculationResults.isPrematureRedemption ? " (Premature Redemption)" : " (Standard Redemption)"}.
                             </p>
-                             <p>• Final Making Charge Discount applied: {formatCurrency(calculationResults.invoiceMakingChargeDiscount)}.</p>
+                            <p>• Actual discount rate applied: {formatNumber(calculationResults.actualAppliedDiscountRate * 100, 2)}% of accumulated gold value.</p>
+                            <p>• Final Making Charge Discount applied: {formatCurrency(calculationResults.invoiceMakingChargeDiscount)}.</p>
                             <p>• Total savings from gold value + MC discount: {formatCurrency(calculationResults.invoiceTotalSavings)}.</p>
                         </CardContent>
                     </Card>
@@ -263,16 +263,16 @@ export default function GoldenGainTrackerPage() {
                      <Card>
                         <CardHeader>
                             <UICardTitle className="flex flex-row items-center justify-between space-y-0 pb-2 text-sm font-medium text-muted-foreground">
-                                How This Calculator Works
+                                How This Calculator Works Guide
                                 <BookOpen className="h-5 w-5 text-accent" />
                             </UICardTitle>
                         </CardHeader>
                         <CardContent className="text-sm text-muted-foreground space-y-1">
-                             <p>• Your scheme offers a potential making charge discount rate equal to {MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD*100}% of the input jewellery's making charge percentage.</p>
-                             <p>• This potential rate is then capped. Standard cap: {STANDARD_DISCOUNT_RATE_CAP*100}%. Premature redemption: {calculatorInputs.prematureRedemptionCapPercentage}% (user-adjustable).</p>
-                             <p>• The final capped discount rate is applied to the value of your accumulated gold to determine the raw discount.</p>
-                             <p>• This raw discount is practically limited by the actual making charges on your gold portion in the new jewellery and also by the total making charges on the new jewellery.</p>
-                             <p>• Your gold value and this final, practically-limited making charge discount are deducted from the total invoice.</p>
+                           <p>• Your scheme offers a potential making charge discount rate equal to {MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD*100}% of the input jewellery's making charge percentage.</p>
+                           <p>• This potential rate is then capped. Standard cap: {STANDARD_DISCOUNT_RATE_CAP*100}%. Premature redemption: {calculatorInputs.isPrematureRedemption ? calculatorInputs.prematureRedemptionCapPercentage : STANDARD_DISCOUNT_RATE_CAP*100 }%.</p>
+                           <p>• The final capped discount rate is applied to the value of your accumulated gold to determine the initial discount amount.</p>
+                           <p>• This initial discount is practically limited by: a) the making charges on your accumulated gold portion in the new jewellery, and b) the total making charges for the new jewellery.</p>
+                           <p>• Your gold value and this final, practically-limited making charge discount are deducted from the total invoice.</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -281,7 +281,6 @@ export default function GoldenGainTrackerPage() {
           </Card>
         </TabsContent>
 
-        {/* Removed: TabsContent for 'forecast' */}
       </Tabs>
 
       <footer className="text-center mt-16 py-8 border-t border-border text-muted-foreground">
@@ -291,5 +290,3 @@ export default function GoldenGainTrackerPage() {
     </div>
   );
 }
-
-    

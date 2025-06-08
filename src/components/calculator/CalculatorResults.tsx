@@ -2,15 +2,15 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Gem, TrendingUp, FileText } from 'lucide-react'; 
-import { MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD, MAKING_CHARGE_DISCOUNT_CAP_PERCENTAGE_OF_TOTAL_INVOICE } from '@/lib/constants';
+import { MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD } from '@/lib/constants'; // Removed unused MAKING_CHARGE_DISCOUNT_CAP_PERCENTAGE_OF_TOTAL_INVOICE
 
 export interface CalculationResults {
   inputAccumulatedGoldGrams: number;
   inputIntendedJewelleryWeight: number;
   inputCurrentGoldPrice: number;
   inputMakingChargePercentage: number;
-  isPrematureRedemption: boolean; // New
-  appliedMakingChargeDiscountCapPercentage: number; // New: The actual cap % used (e.g., 12% or user-set premature cap)
+  isPrematureRedemption: boolean; 
+  appliedMakingChargeDiscountCapPercentage: number; 
 
   yourGoldValue: number;
   additionalGoldGrams: number;
@@ -65,11 +65,11 @@ export function CalculatorResults({ results, formatCurrency, formatNumber }: Cal
         <CardContent className="space-y-2">
           <DetailRow label="Your Gold Value" value={formatCurrency(results.yourGoldValue)} />
           <DetailRow label="Total Jewelry Weight" value={`${formatNumber(results.inputIntendedJewelleryWeight, 3)} g`} />
-          {results.additionalGoldGrams > 0 ? (
+          {results.additionalGoldGrams >= 0 ? ( // Check if it's zero or positive for "Needed" or "Exact"
             <DetailRow 
               label="Additional Gold Needed" 
               value={`${formatNumber(results.additionalGoldGrams, 3)} g`}
-              subValue={`Worth ${formatCurrency(results.additionalGoldValue)}`}
+              subValue={results.additionalGoldGrams > 0 ? `Worth ${formatCurrency(results.additionalGoldValue)}` : ""}
             />
           ) : (
              <DetailRow 
@@ -93,9 +93,9 @@ export function CalculatorResults({ results, formatCurrency, formatNumber }: Cal
             <p className="text-lg font-semibold">{formatNumber(results.goldAnalysisYouHaveGrams, 3)} g</p>
             <p className="text-xs text-muted-foreground">Worth {formatCurrency(results.goldAnalysisYouHaveWorth)}</p>
           </div>
-          <div className={`p-3 rounded-md ${results.additionalGoldGrams > 0 ? 'bg-amber-500/10' : 'bg-green-500/10'}`}>
-            <p className={`text-sm font-medium ${results.additionalGoldGrams > 0 ? 'text-amber-700' : 'text-green-700'}`}>
-              {results.additionalGoldGrams > 0 ? 'Need Additional' : 'Surplus Gold'}
+          <div className={`p-3 rounded-md ${results.goldAnalysisNeedAdditionalGrams > 0 ? 'bg-amber-500/10' : 'bg-green-500/10'}`}>
+            <p className={`text-sm font-medium ${results.goldAnalysisNeedAdditionalGrams > 0 ? 'text-amber-700' : 'text-green-700'}`}>
+              {results.goldAnalysisNeedAdditionalGrams > 0 ? 'Need Additional' : (results.goldAnalysisNeedAdditionalGrams === 0 ? 'Exact Amount' : 'Surplus Gold')}
             </p>
             <p className="text-lg font-semibold">{formatNumber(Math.abs(results.goldAnalysisNeedAdditionalGrams), 3)} g</p>
             <p className="text-xs text-muted-foreground">Worth {formatCurrency(Math.abs(results.goldAnalysisNeedAdditionalWorth))}</p>

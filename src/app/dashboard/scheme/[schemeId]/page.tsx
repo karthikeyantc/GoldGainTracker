@@ -5,7 +5,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, Timestamp, updateDoc, arrayUnion, increment, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, Timestamp, updateDoc, arrayUnion, increment } from 'firebase/firestore'; // Removed serverTimestamp as it's not used directly here anymore
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -120,7 +120,7 @@ export default function SchemeDetailPage() {
     try {
         const goldPurchased = amount / rate;
         const newTransactionData = {
-            date: serverTimestamp(), 
+            date: new Date(), // Use client-side date
             investedAmount: amount,
             goldRate: rate,
             goldPurchasedGrams: goldPurchased,

@@ -11,23 +11,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency, formatNumber } from '@/lib/formatters';
-import { GST_RATE } from '@/lib/constants';
+import { GST_RATE, MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD, MAKING_CHARGE_DISCOUNT_CAP_PERCENTAGE_OF_TOTAL_INVOICE } from '@/lib/constants';
 import type { InvestmentForecastInput, InvestmentForecastOutput } from '@/ai/flows/investment-forecast';
 import { investmentForecast as generateInvestmentForecast } from '@/ai/flows/investment-forecast';
 import { useToast } from "@/hooks/use-toast";
-import { Calculator, BarChartBig, Coins, Gem } from 'lucide-react';
+import { Calculator, BarChartBig, Coins, Gem, Sparkles, Activity, FileTextIcon, PercentIcon, BookOpen } from 'lucide-react';
 
 const initialCalculatorInputs: CalculatorInputState = {
-  monthlyInvestment: '',
-  monthsPaid: '',
-  currentGoldPrice: '',
+  accumulatedGoldGrams: '',
   intendedJewelleryWeight: '',
+  currentGoldPrice: '',
   makingChargePercentage: '',
 };
 
 const initialForecastInputs: Partial<InvestmentForecastInput> = {
-  monthlyInvestment: undefined,
-  monthsPaid: undefined,
+  monthlyInvestment: undefined, // Retain for forecast, but not used in new calculator directly
+  monthsPaid: undefined, // Retain for forecast
   currentGoldPrice: undefined,
   intendedJewelleryWeight: undefined,
   makingChargePercentage: undefined,
@@ -47,90 +46,101 @@ export default function GoldenGainTrackerPage() {
   const handleCalculatorInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setCalculatorInputs(prev => ({ ...prev, [name]: value }));
-    setCalculationResults(null); // Clear results on input change
+    setCalculationResults(null); 
   };
 
   const handleForecastInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setForecastInputs(prev => ({ ...prev, [name]: value ? parseFloat(value) : undefined }));
-    setForecastResult(null); // Clear results on input change
+    const parsedValue = value ? parseFloat(value) : undefined;
+    setForecastInputs(prev => ({ ...prev, [name]: parsedValue }));
+    setForecastResult(null); 
   };
   
   const prefillForecastInputs = useCallback(() => {
-    setForecastInputs({
-        monthlyInvestment: calculatorInputs.monthlyInvestment ? parseFloat(calculatorInputs.monthlyInvestment) : undefined,
-        monthsPaid: calculatorInputs.monthsPaid ? parseFloat(calculatorInputs.monthsPaid) : undefined, // User might want to change this to total scheme duration
-        currentGoldPrice: calculatorInputs.currentGoldPrice ? parseFloat(calculatorInputs.currentGoldPrice) : undefined,
-        intendedJewelleryWeight: calculatorInputs.intendedJewelleryWeight ? parseFloat(calculatorInputs.intendedJewelleryWeight) : undefined,
-        makingChargePercentage: calculatorInputs.makingChargePercentage ? parseFloat(calculatorInputs.makingChargePercentage) : undefined,
-    });
+    // For forecast, we might need to estimate monthlyInvestment and monthsPaid if not available.
+    // For now, let's use current gold price, jewellery weight, and MC% from calculator if available.
+    // User will need to fill in monthly investment and total scheme duration for a meaningful forecast.
+    setForecastInputs(prev => ({
+        ...prev, // keep existing forecast inputs like monthly investment & months paid
+        currentGoldPrice: calculatorInputs.currentGoldPrice ? parseFloat(calculatorInputs.currentGoldPrice) : prev.currentGoldPrice,
+        intendedJewelleryWeight: calculatorInputs.intendedJewelleryWeight ? parseFloat(calculatorInputs.intendedJewelleryWeight) : prev.intendedJewelleryWeight,
+        makingChargePercentage: calculatorInputs.makingChargePercentage ? parseFloat(calculatorInputs.makingChargePercentage) : prev.makingChargePercentage,
+    }));
   }, [calculatorInputs]);
-
-  useEffect(() => {
-    prefillForecastInputs();
-  }, [calculatorInputs, prefillForecastInputs]);
 
 
   const performCalculations = () => {
     setIsCalculating(true);
-    const { monthlyInvestment, monthsPaid, currentGoldPrice, intendedJewelleryWeight, makingChargePercentage } = calculatorInputs;
+    const { accumulatedGoldGrams, intendedJewelleryWeight, currentGoldPrice, makingChargePercentage } = calculatorInputs;
 
-    const mi = parseFloat(monthlyInvestment);
-    const mp = parseInt(monthsPaid);
-    const cgp = parseFloat(currentGoldPrice);
+    const accGold = parseFloat(accumulatedGoldGrams);
     const ijw = parseFloat(intendedJewelleryWeight);
+    const cgp = parseFloat(currentGoldPrice);
     const mcp = parseFloat(makingChargePercentage);
 
-    if (isNaN(mi) || isNaN(mp) || isNaN(cgp) || isNaN(ijw) || isNaN(mcp) || mi <=0 || mp <=0 || cgp <=0 || ijw <=0 || mcp < 0) {
-      toast({ title: "Invalid Input", description: "Please enter valid positive numbers for all fields.", variant: "destructive" });
+    if (isNaN(accGold) || isNaN(ijw) || isNaN(cgp) || isNaN(mcp) || accGold < 0 || ijw <=0 || cgp <=0 || mcp < 0) {
+      toast({ title: "Invalid Input", description: "Please enter valid numbers. Gold price, jewellery weight must be positive. Making charge cannot be negative.", variant: "destructive" });
       setIsCalculating(false);
       return;
     }
     
-    // Simulate calculation delay for visual feedback
     setTimeout(() => {
-      const totalInvested = mi * mp;
-      const accumulatedGoldGrams = totalInvested / cgp;
-      
-      const jewelleryBaseCost = ijw * cgp;
-      const makingChargesRaw = (mcp / 100) * jewelleryBaseCost;
-      
-      // Original subtotal before any discount or GST
-      const originalSubTotalPreGst = jewelleryBaseCost + makingChargesRaw;
-      // GST on this original subtotal (for display under "Jewellery & Charges")
-      const gstOnOriginalSubTotal = GST_RATE * originalSubTotalPreGst;
-      // Gross total bill if no discount were applied (for display under "Jewellery & Charges")
-      const grossInvoiceTotalPreDiscount = originalSubTotalPreGst + gstOnOriginalSubTotal;
+      // Values for "Calculation Results" section
+      const yourGoldValue = accGold * cgp;
+      const additionalGoldGrams = Math.max(0, ijw - accGold);
+      const additionalGoldValue = additionalGoldGrams * cgp;
 
-      // Scheme discount value: 1 month's investment, capped by making charges (raw)
-      const schemeDiscountValue = Math.min(mi, makingChargesRaw);
+      // Invoice Breakdown Step 1: Base Jewelry Cost
+      const baseJewelleryCostForInvoice = ijw * cgp;
+      const makingChargesForInvoice = (mcp / 100) * baseJewelleryCostForInvoice;
+      const subtotalBeforeGst = baseJewelleryCostForInvoice + makingChargesForInvoice;
 
-      // Effective making charges after discount is applied
-      const finalMakingCharges = makingChargesRaw - schemeDiscountValue;
+      // Invoice Breakdown Step 2: Add GST
+      const gstAmount = GST_RATE * subtotalBeforeGst;
+      const totalInvoice = subtotalBeforeGst + gstAmount;
+
+      // Invoice Breakdown Step 3: Apply Deductions
+      const goldValueDeduction = yourGoldValue; // Full value of accumulated gold
+
+      // Making Charge Discount specific logic from image
+      const goldWeightEligibleForMcDiscount = Math.min(accGold, ijw);
+      const makingChargesOnAccumulatedGoldPortion = (mcp / 100) * (goldWeightEligibleForMcDiscount * cgp);
+      const potentialMcDiscount = MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD * makingChargesOnAccumulatedGoldPortion;
       
-      // Taxable subtotal: Jewellery base cost + (making charges after discount)
-      const taxableSubTotal = jewelleryBaseCost + finalMakingCharges;
-      
-      // Actual GST paid, calculated on the taxable subtotal
-      const actualGstPaid = GST_RATE * taxableSubTotal;
-      
-      // Final payable amount: Taxable subtotal + GST on taxable subtotal
-      const finalPayable = taxableSubTotal + actualGstPaid;
+      const capAmountForMcDiscount = MAKING_CHARGE_DISCOUNT_CAP_PERCENTAGE_OF_TOTAL_INVOICE * totalInvoice;
+      const finalMakingChargeDiscount = Math.min(potentialMcDiscount, capAmountForMcDiscount);
+
+      const totalSavings = goldValueDeduction + finalMakingChargeDiscount;
+      const finalAmountToPay = totalInvoice - totalSavings;
       
       setCalculationResults({
-        accumulatedGoldGrams,
-        totalInvested,
-        jewelleryBaseCost,
-        makingChargesRaw,
-        
-        subTotalBeforeGst: originalSubTotalPreGst, // Displayed as "Subtotal (Jewellery + Original MC)"
-        gstOnSubtotal: gstOnOriginalSubTotal, // Displayed as "GST (3% on Subtotal)" - i.e., on original subtotal
-        grossInvoiceTotal: grossInvoiceTotalPreDiscount, // Displayed as "Gross Invoice Total"
+        // Inputs to pass through for display
+        inputAccumulatedGoldGrams: accGold,
+        inputIntendedJewelleryWeight: ijw,
+        inputCurrentGoldPrice: cgp,
+        inputMakingChargePercentage: mcp,
 
-        schemeDiscountOnMakingCharges: schemeDiscountValue, // The discount amount itself
-        finalMakingCharges: finalMakingCharges, // Net making charges after discount
-        finalGst: actualGstPaid, // Actual GST paid on the discounted base
-        finalPayable, // Final bill amount
+        // Calculation Results section
+        yourGoldValue,
+        additionalGoldGrams,
+        additionalGoldValue,
+
+        // Gold Analysis section
+        goldAnalysisYouHaveGrams: accGold, // Same as inputAccumulatedGoldGrams
+        goldAnalysisYouHaveWorth: yourGoldValue, // Same as yourGoldValue
+        goldAnalysisNeedAdditionalGrams: additionalGoldGrams,
+        goldAnalysisNeedAdditionalWorth: additionalGoldValue,
+
+        // Complete Invoice Breakdown
+        invoiceBaseJewelleryCost: baseJewelleryCostForInvoice,
+        invoiceMakingCharges: makingChargesForInvoice,
+        invoiceSubtotalBeforeGst: subtotalBeforeGst,
+        invoiceGstAmount: gstAmount,
+        invoiceTotalInvoice: totalInvoice,
+        invoiceGoldValueDeduction: goldValueDeduction,
+        invoiceMakingChargeDiscount: finalMakingChargeDiscount,
+        invoiceTotalSavings: totalSavings,
+        finalAmountToPay: finalAmountToPay < 0 ? 0 : finalAmountToPay, // Cannot be negative
       });
       setIsCalculating(false);
     }, 500);
@@ -140,14 +150,15 @@ export default function GoldenGainTrackerPage() {
     setIsForecasting(true);
     setForecastResult(null);
 
-    const allFieldsPresent = forecastInputs.monthlyInvestment && forecastInputs.monthsPaid && forecastInputs.currentGoldPrice && forecastInputs.intendedJewelleryWeight && forecastInputs.makingChargePercentage;
+    const { monthlyInvestment, monthsPaid, currentGoldPrice: forecastGoldPrice, intendedJewelleryWeight: forecastJewelleryWeight, makingChargePercentage: forecastMcPercentage } = forecastInputs;
 
-    if (!allFieldsPresent || Object.values(forecastInputs).some(v => v === undefined || v <= 0) || (forecastInputs.makingChargePercentage !== undefined && forecastInputs.makingChargePercentage < 0) ) {
+    if (!monthlyInvestment || !monthsPaid || !forecastGoldPrice || !forecastJewelleryWeight || !forecastMcPercentage ||
+        monthlyInvestment <= 0 || monthsPaid <= 0 || forecastGoldPrice <= 0 || forecastJewelleryWeight <= 0 || forecastMcPercentage < 0) {
        toast({ title: "Invalid Forecast Input", description: "Please ensure all forecast fields are filled with valid positive numbers.", variant: "destructive" });
        setIsForecasting(false);
        return;
     }
-
+    
     try {
       const result = await generateInvestmentForecast(forecastInputs as InvestmentForecastInput);
       setForecastResult(result);
@@ -178,7 +189,7 @@ export default function GoldenGainTrackerPage() {
       <Tabs defaultValue="calculator" className="w-full max-w-4xl mx-auto">
         <TabsList className="grid w-full grid-cols-2 mb-8 bg-accent/10 p-2 rounded-lg">
           <TabsTrigger value="calculator" className="py-3 text-base data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">
-            <Calculator className="mr-2" /> Redemption Calculator
+            <Calculator className="mr-2" /> Gold Value Calculator
           </TabsTrigger>
           <TabsTrigger value="forecast" className="py-3 text-base data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md">
             <BarChartBig className="mr-2" /> Investment AI Forecast
@@ -188,7 +199,7 @@ export default function GoldenGainTrackerPage() {
         <TabsContent value="calculator">
           <Card className="shadow-xl border-primary/20">
             <CardHeader>
-              <SectionTitle title="Redemption Calculator" icon={Coins} />
+               {/* Title is now inside CalculatorForm */}
             </CardHeader>
             <CardContent>
               <div className="grid md:grid-cols-2 gap-8">
@@ -200,8 +211,7 @@ export default function GoldenGainTrackerPage() {
                     isLoading={isCalculating}
                   />
                 </div>
-                <div>
-                  <h3 className="font-headline text-2xl font-semibold mb-4 text-primary">Calculation Summary</h3>
+                <div className="md:mt-[4.25rem]"> {/* Align with button from form */}
                   {calculationResults ? (
                     <CalculatorResults 
                       results={calculationResults} 
@@ -209,13 +219,69 @@ export default function GoldenGainTrackerPage() {
                       formatNumber={formatNumber} 
                     />
                   ) : (
-                    <div className="text-center py-10 text-muted-foreground">
-                      <Gem className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                      <p>Enter your details and click "Calculate Final Bill" to see your redemption summary.</p>
+                    <div className="text-center py-10 text-muted-foreground h-full flex flex-col justify-center items-center">
+                      <Gem className="mx-auto h-16 w-16 mb-4 opacity-50" />
+                      <p className="text-lg">Enter your gold details and click "Calculate Gold Value" to see your breakdown.</p>
                     </div>
                   )}
                 </div>
               </div>
+               {calculationResults && (
+                <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <Card>
+                        <CardHeader>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <h3 className="text-sm font-medium text-muted-foreground">Calculation Summary</h3>
+                                <FileTextIcon className="h-5 w-5 text-accent" />
+                            </CardHeader>
+                        </CardHeader>
+                        <CardContent className="text-sm text-muted-foreground space-y-2">
+                            <p>• Your accumulated gold {formatNumber(calculationResults.inputAccumulatedGoldGrams, 3)}g worth {formatCurrency(calculationResults.yourGoldValue)}.</p>
+                            {calculationResults.additionalGoldGrams > 0 && <p>• Additional gold needed {formatNumber(calculationResults.additionalGoldGrams, 3)}g worth {formatCurrency(calculationResults.additionalGoldValue)}.</p>}
+                            <p>• {MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD * 100}% discount on making charges for your accumulated gold ({formatCurrency(calculationResults.invoiceMakingChargeDiscount)}).</p>
+                            <p>• Discount capped at {MAKING_CHARGE_DISCOUNT_CAP_PERCENTAGE_OF_TOTAL_INVOICE * 100}% of total invoice value.</p>
+                            <p>• Total savings from gold value + discount: {formatCurrency(calculationResults.invoiceTotalSavings)}.</p>
+                        </CardContent>
+                    </Card>
+                     <Card className="bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700">
+                        <CardHeader>
+                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <h3 className="text-sm font-medium text-green-700 dark:text-green-300">Your Gold Portfolio Summary</h3>
+                                <Activity className="h-5 w-5 text-green-600 dark:text-green-400" />
+                            </CardHeader>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                            <div>
+                                <p className="text-xs text-green-600 dark:text-green-400">Gold Value</p>
+                                <p className="text-xl font-bold text-green-800 dark:text-green-200">{formatCurrency(calculationResults.yourGoldValue)}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-green-600 dark:text-green-400">Total Savings</p>
+                                <p className="text-xl font-bold text-green-800 dark:text-green-200">{formatCurrency(calculationResults.invoiceTotalSavings)}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-amber-600 dark:text-amber-400">Final Payment</p>
+                                <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">{formatCurrency(calculationResults.finalAmountToPay)}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <h3 className="text-sm font-medium text-muted-foreground">How This Calculator Works</h3>
+                                <BookOpen className="h-5 w-5 text-accent" />
+                            </CardHeader>
+                        </CardHeader>
+                        <CardContent className="text-sm text-muted-foreground space-y-1">
+                            <p>• Enter your accumulated gold weight from schemes.</p>
+                            <p>• Add the weight of jewellery you want to purchase.</p>
+                            <p>• Get {MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD * 100}% discount on making charges for your accumulated gold portion.</p>
+                            <p>• Your gold value is deducted from the total invoice.</p>
+                            <p>• Pay only the remaining amount after all deductions.</p>
+                        </CardContent>
+                    </Card>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -234,8 +300,8 @@ export default function GoldenGainTrackerPage() {
                     onSubmit={handleForecastSubmit}
                     isLoading={isForecasting}
                   />
-                  <Button variant="outline" onClick={prefillForecastInputs} className="mt-4 w-full border-primary text-primary hover:bg-primary/10">
-                    Use Calculator Inputs
+                   <Button variant="outline" onClick={prefillForecastInputs} className="mt-4 w-full border-primary text-primary hover:bg-primary/10">
+                    Use Calculator Inputs (Gold Rate, Weight, MC%)
                   </Button>
                 </div>
                  <div>

@@ -306,4 +306,5 @@ export default function GoldenGainTrackerPage() {
     </div>
   );
 }
+
     

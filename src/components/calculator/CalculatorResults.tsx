@@ -1,16 +1,20 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Gem, TrendingUp, FileText, ShoppingBag, Landmark, Percent } from 'lucide-react'; 
-import { MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD, STANDARD_DISCOUNT_RATE_CAP } from '@/lib/constants'; 
+import { Gem, TrendingUp, FileText, ShoppingBag, Landmark, Percent, BookOpen, BarChart3 as BarChartIcon } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList } from "recharts";
+
+import { MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD, STANDARD_DISCOUNT_RATE_CAP } from '@/lib/constants';
 
 export interface CalculationResults {
   inputAccumulatedGoldGrams: number;
   inputIntendedJewelleryWeight: number;
   inputCurrentGoldPrice: number;
   inputMakingChargePercentage: number;
-  isPrematureRedemption: boolean; 
-  appliedMakingChargeDiscountCapPercentage: number; // The actual cap rate used (e.g., 12% or user-selected premature %)
+  isPrematureRedemption: boolean;
+  appliedMakingChargeDiscountCapPercentage: number;
 
   yourGoldValue: number;
   additionalGoldGrams: number;
@@ -22,16 +26,15 @@ export interface CalculationResults {
   goldAnalysisNeedAdditionalWorth: number;
 
   invoiceBaseJewelleryCost: number;
-  invoiceMakingCharges: number; // This is raw MC on intended jewellery
+  invoiceMakingCharges: number;
   invoiceSubtotalBeforeGst: number;
   invoiceGstAmount: number;
   invoiceTotalInvoice: number;
   invoiceGoldValueDeduction: number;
-  invoiceMakingChargeDiscount: number; // Final applied MC discount
+  invoiceMakingChargeDiscount: number;
   invoiceTotalSavings: number;
   finalAmountToPay: number;
 
-  // For detailed breakdown of final amount
   breakdown_additionalGoldCost: number;
   breakdown_mcOnAdditionalGold: number;
   breakdown_netMcOnAccumulatedGold: number;
@@ -54,11 +57,63 @@ const DetailRow: React.FC<{ label: string; value: string; isEmphasized?: boolean
   </div>
 );
 
+const chartConfig = {
+  amount: {
+    label: "Amount (₹)",
+  },
+  additionalGold: {
+    label: "Additional Gold Cost",
+    color: "hsl(var(--chart-1))",
+  },
+  mcOnAdditional: {
+    label: "MC on Additional Gold",
+    color: "hsl(var(--chart-2))",
+  },
+  netMcOnAccumulated: {
+    label: "Net MC on Your Gold",
+    color: "hsl(var(--chart-3))",
+  },
+  gst: {
+    label: "GST",
+    color: "hsl(var(--chart-4))",
+  },
+} satisfies ChartConfig;
+
 
 export function CalculatorResults({ results, formatCurrency, formatNumber }: CalculatorResultsProps) {
   if (!results) return null;
 
   const potentialDiscountRateDisplay = (results.inputMakingChargePercentage / 100) * MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD * 100;
+
+  const howItWorksItems = [
+    {
+      trigger: "How is the Making Charge Discount Rate determined?",
+      content: `The scheme offers a discount rate that is ${formatNumber(MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD * 100, 0)}% of the making charge percentage you enter for your jewellery. For example, if your making charge is ${results.inputMakingChargePercentage}%, the potential discount rate from the scheme is ${formatNumber(potentialDiscountRateDisplay, 2)}%.`
+    },
+    {
+      trigger: "Is there a cap on this discount rate?",
+      content: `Yes. This potential rate is then capped. For standard redemptions, the rate is capped at ${formatNumber(STANDARD_DISCOUNT_RATE_CAP * 100, 0)}%. For premature redemptions, the cap is adjustable by you and for this calculation was ${results.isPrematureRedemption ? `set to ${formatNumber(results.appliedMakingChargeDiscountCapPercentage, 0)}%` : `the standard ${formatNumber(STANDARD_DISCOUNT_RATE_CAP * 100, 0)}% (as this was not a premature redemption)`}. The lower of the scheme's potential rate and this cap is taken as the actual rate to apply.`
+    },
+    {
+      trigger: "How is the discount amount calculated from this rate?",
+      content: `The final capped discount rate (${formatNumber(results.invoiceMakingChargeDiscount / results.yourGoldValue * 100, 2)}% in this case, if applicable) is applied to the total value of your accumulated gold (${formatCurrency(results.yourGoldValue)}) to determine an initial discount amount.`
+    },
+    {
+      trigger: "Are there practical limits to this discount?",
+      content: `Yes, the calculated discount amount is further limited. It cannot be more than the making charges that would apply to your accumulated gold portion if it were part of the new jewellery. Additionally, it cannot exceed the total making charges (${formatCurrency(results.invoiceMakingCharges)}) for the entire new jewellery item you are purchasing. The final discount applied (${formatCurrency(results.invoiceMakingChargeDiscount)}) respects these limits.`
+    },
+    {
+      trigger: "How is the final payable amount calculated?",
+      content: `The total invoice for your new jewellery (${formatCurrency(results.invoiceTotalInvoice)}) is calculated first (gold cost + total making charges + GST). From this, we deduct the value of your accumulated gold (${formatCurrency(results.invoiceGoldValueDeduction)}) and the final, practically-limited making charge discount (${formatCurrency(results.invoiceMakingChargeDiscount)}) to arrive at the amount you need to pay (${formatCurrency(results.finalAmountToPay)}).`
+    }
+  ];
+
+  const paymentBreakdownChartData = [
+    { component: "Additional Gold", amount: results.breakdown_additionalGoldCost, fill: chartConfig.additionalGold.color },
+    { component: "MC on Add. Gold", amount: results.breakdown_mcOnAdditionalGold, fill: chartConfig.mcOnAdditional.color },
+    { component: "Net MC on Your Gold", amount: results.breakdown_netMcOnAccumulatedGold, fill: chartConfig.netMcOnAccumulated.color },
+    { component: "GST", amount: results.breakdown_gst, fill: chartConfig.gst.color },
+  ].filter(item => item.amount > 0); // Filter out zero values for cleaner chart
 
   return (
     <div className="space-y-6">
@@ -71,15 +126,15 @@ export function CalculatorResults({ results, formatCurrency, formatNumber }: Cal
         <CardContent className="space-y-2">
           <DetailRow label="Your Gold Value" value={formatCurrency(results.yourGoldValue)} />
           <DetailRow label="Total Jewelry Weight" value={`${formatNumber(results.inputIntendedJewelleryWeight, 3)} g`} />
-          {results.additionalGoldGrams >= 0 ? ( 
-            <DetailRow 
-              label="Additional Gold Needed" 
+          {results.additionalGoldGrams >= 0 ? (
+            <DetailRow
+              label="Additional Gold Needed"
               value={`${formatNumber(results.additionalGoldGrams, 3)} g`}
               subValue={results.additionalGoldGrams > 0 ? `Worth ${formatCurrency(results.additionalGoldValue)}` : ""}
             />
           ) : (
-             <DetailRow 
-              label="Surplus Gold Value" 
+             <DetailRow
+              label="Surplus Gold Value"
               value={formatCurrency(Math.abs(results.additionalGoldValue))}
               subValue={`${formatNumber(Math.abs(results.additionalGoldGrams), 3)} g`}
             />
@@ -132,9 +187,9 @@ export function CalculatorResults({ results, formatCurrency, formatNumber }: Cal
           <div className="p-4 bg-green-50 dark:bg-green-900/30 rounded-md border border-green-200 dark:border-green-700">
             <h4 className="font-semibold text-green-700 dark:text-green-300 mb-1">Step 3: Apply Deductions</h4>
             <DetailRow label="Your Gold Value Deduction" value={`-${formatCurrency(results.invoiceGoldValueDeduction)}`} />
-            <DetailRow 
-              label={`Making Charge Discount (Rate: ${formatNumber(potentialDiscountRateDisplay,1)}% of Acc. Gold Value, Capped at ${formatNumber(results.appliedMakingChargeDiscountCapPercentage,0)}% Rate)`}
-              value={`-${formatCurrency(results.invoiceMakingChargeDiscount)}`} 
+            <DetailRow
+              label={`Making Charge Discount (Rate capped at ${formatNumber(results.appliedMakingChargeDiscountCapPercentage,0)}%)`}
+              value={`-${formatCurrency(results.invoiceMakingChargeDiscount)}`}
             />
             <DetailRow label="Total Savings" value={formatCurrency(results.invoiceTotalSavings)} />
           </div>
@@ -149,27 +204,87 @@ export function CalculatorResults({ results, formatCurrency, formatNumber }: Cal
         <Card>
           <CardHeader>
             <CardTitle className="font-headline text-xl text-primary flex items-center">
-              <ShoppingBag className="mr-2 h-5 w-5" /> Final Payment Breakdown
+              <BarChartIcon className="mr-2 h-5 w-5" /> Final Payment Breakdown
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-1">
-            {results.breakdown_additionalGoldCost > 0 && (
-              <DetailRow label="For Additional Gold" value={formatCurrency(results.breakdown_additionalGoldCost)} />
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+              {results.breakdown_additionalGoldCost > 0 && (
+                <DetailRow label="For Additional Gold" value={formatCurrency(results.breakdown_additionalGoldCost)} />
+              )}
+              {results.breakdown_mcOnAdditionalGold > 0 && (
+                <DetailRow label="Making Charges (on Additional Gold)" value={formatCurrency(results.breakdown_mcOnAdditionalGold)} />
+              )}
+              {results.breakdown_netMcOnAccumulatedGold > 0 && (
+                   <DetailRow label="Making Charges (on Your Gold Portion, Net of Discount)" value={formatCurrency(results.breakdown_netMcOnAccumulatedGold)} />
+              )}
+               <DetailRow label="GST (on Original Invoice)" value={formatCurrency(results.breakdown_gst)} />
+            </div>
+            <hr className="my-2 border-dashed border-border" />
+            <DetailRow label="Total Payable (Reconciled)" value={formatCurrency(results.finalAmountToPay)} isEmphasized className="text-amber-700 dark:text-amber-500" />
+
+            {paymentBreakdownChartData.length > 0 && (
+              <div className="mt-4">
+                <h4 className="text-sm font-medium text-center mb-2 text-muted-foreground">Visual Breakdown</h4>
+                <ChartContainer config={chartConfig} className="min-h-[200px] w-full max-w-md mx-auto">
+                  <BarChart
+                    accessibilityLayer
+                    data={paymentBreakdownChartData}
+                    layout="vertical"
+                    margin={{ left: 30, right:30 }}
+                  >
+                    <CartesianGrid horizontal={false} />
+                    <YAxis
+                      dataKey="component"
+                      type="category"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={5}
+                      width={130}
+                      className="text-xs"
+                    />
+                    <XAxis dataKey="amount" type="number" hide />
+                    <ChartTooltip
+                      cursor={false}
+                      content={<ChartTooltipContent indicator="dot" hideLabel />}
+                    />
+                    <Bar dataKey="amount" radius={5}>
+                       <LabelList
+                        dataKey="amount"
+                        position="right"
+                        offset={8}
+                        className="fill-foreground text-xs"
+                        formatter={(value: number) => formatCurrency(value)}
+                      />
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
+              </div>
             )}
-            {results.breakdown_mcOnAdditionalGold > 0 && (
-              <DetailRow label="Making Charges (on Additional Gold)" value={formatCurrency(results.breakdown_mcOnAdditionalGold)} />
-            )}
-            {results.breakdown_netMcOnAccumulatedGold > 0 && (
-                 <DetailRow label="Making Charges (on Your Gold Portion, Net of Discount)" value={formatCurrency(results.breakdown_netMcOnAccumulatedGold)} />
-            )}
-             <DetailRow label="GST (on Original Invoice)" value={formatCurrency(results.breakdown_gst)} />
-             <hr className="my-2 border-dashed border-border" />
-             <DetailRow label="Total Payable (Reconciled)" value={formatCurrency(results.finalAmountToPay)} isEmphasized className="text-amber-700 dark:text-amber-500" />
           </CardContent>
         </Card>
       )}
-
+       <Card>
+        <CardHeader>
+            <CardTitle className="font-headline text-xl text-primary flex items-center">
+                <BookOpen className="mr-2 h-5 w-5" /> How This Calculator Works
+            </CardTitle>
+        </CardHeader>
+        <CardContent>
+            <Accordion type="single" collapsible className="w-full">
+                {howItWorksItems.map((item, index) => (
+                    <AccordionItem value={`item-${index + 1}`} key={index}>
+                        <AccordionTrigger className="text-sm text-left hover:no-underline text-muted-foreground data-[state=open]:text-primary">
+                            {item.trigger}
+                        </AccordionTrigger>
+                        <AccordionContent className="text-sm text-foreground/80">
+                            {item.content}
+                        </AccordionContent>
+                    </AccordionItem>
+                ))}
+            </Accordion>
+        </CardContent>
+      </Card>
     </div>
   );
 }
-

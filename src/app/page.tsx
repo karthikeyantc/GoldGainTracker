@@ -214,7 +214,114 @@ export default function GoldenGainTrackerPage() {
       setIsForecasting(false);
     }
   };
-
+  
   console.log('Pre-render log for GoldenGainTrackerPage');
-  return (<div>Test Page</div>);
+  return (
+    <div className="min-h-screen bg-background text-foreground p-4 md:p-8">
+      <header className="text-center mb-12">
+        <div className="flex justify-between items-center mb-2">
+            <div className="w-1/3"> {/* Left Spacer / Future Links */} </div>
+            <h1 className="font-headline text-4xl md:text-5xl font-bold text-primary w-1/3">
+              GoldenGain Tracker
+            </h1>
+            <div className="w-1/3 flex justify-end items-center space-x-2">
+              <ThemeToggle />
+              {authLoading ? (
+                <Button variant="outline" disabled>Loading...</Button>
+              ) : user ? (
+                <>
+                  <Button variant="ghost" asChild>
+                    <Link href="/dashboard">
+                      <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
+                    </Link>
+                  </Button>
+                  <Button variant="outline" onClick={signOutUser}>
+                    <LogOut className="mr-2 h-4 w-4" /> Logout
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" asChild>
+                  <Link href="/auth">
+                    <LogIn className="mr-2 h-4 w-4" /> Login
+                  </Link>
+                </Button>
+              )}
+            </div>
+        </div>
+        <p className="text-muted-foreground text-lg">
+          Your companion for gold investment planning & jewellery purchase calculations.
+        </p>
+      </header>
+
+      <main className="container mx-auto px-0 md:px-4">
+        <Tabs defaultValue="calculator" className="w-full max-w-4xl mx-auto">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="calculator" className="text-lg py-3">
+              <Calculator className="mr-2" /> Gold Value Calculator
+            </TabsTrigger>
+            <TabsTrigger value="forecast" className="text-lg py-3">
+              <Activity className="mr-2" /> AI Investment Forecast
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="calculator">
+            <Card className="shadow-xl">
+              <CardHeader>
+                <CardTitle className="font-headline text-3xl text-center text-accent flex items-center justify-center">
+                  <Gem className="mr-2 h-7 w-7" /> Gold Scheme Value Calculator
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6">
+                <CalculatorForm
+                  inputs={calculatorInputs}
+                  onInputChange={handleCalculatorInputChange}
+                  onCheckboxChange={handleCheckboxChange}
+                  onSliderChange={handleSliderChange}
+                  onSubmit={performCalculations}
+                  isLoading={isCalculating}
+                  maxMcDiscountCap={STANDARD_DISCOUNT_RATE_CAP * 100}
+                />
+                {isCalculating && <div className="flex justify-center items-center md:col-span-1"><p>Calculating results...</p></div>}
+                {calculationResults && !isCalculating && (
+                  <CalculatorResults
+                    results={calculationResults}
+                    formatCurrency={formatCurrency}
+                    formatNumber={formatNumber}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="forecast">
+            <Card className="shadow-xl">
+              <CardHeader>
+                 <SectionTitle title="AI Investment Forecast" icon={Activity} />
+              </CardHeader>
+              <CardContent className="p-6">
+                <InvestmentForecastForm
+                  inputs={forecastInputs}
+                  onInputChange={handleForecastInputChange}
+                  onSubmit={handleForecastSubmit}
+                  isLoading={isForecasting}
+                />
+                <InvestmentForecastResult
+                  result={forecastResult}
+                  isLoading={isForecasting}
+                  formatCurrency={formatCurrency}
+                  formatNumber={formatNumber}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </main>
+
+      <footer className="text-center mt-16 py-8 border-t border-border text-muted-foreground">
+        <p>&copy; {new Date().getFullYear()} GoldenGain Tracker. All rights reserved.</p>
+      </footer>
+    </div>
+  );
 }
+
+    

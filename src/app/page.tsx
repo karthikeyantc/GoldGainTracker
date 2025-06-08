@@ -150,6 +150,7 @@ export default function GoldenGainTrackerPage() {
     setIsCalculating(false);
   }, [calculatorInputs, toast]);
 
+  console.log('Pre-render log for GoldenGainTrackerPage');
   return (
     <div className="min-h-screen bg-background text-foreground p-4 md:p-8">
       <header className="text-center mb-12">
@@ -306,5 +307,3 @@ export default function GoldenGainTrackerPage() {
     </div>
   );
 }
-
-    

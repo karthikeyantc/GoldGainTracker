@@ -83,7 +83,7 @@ export default function GoldenGainTrackerPage() {
 
   const performCalculations = () => {
     setIsCalculating(true);
-    setCalculationResults(null); 
+    setCalculationResults(null);
 
     const {
       accumulatedGoldGrams,
@@ -117,17 +117,21 @@ export default function GoldenGainTrackerPage() {
     
     const goldValueDeduction = yourGoldValue;
 
-    const goldWeightEligibleForMcDiscount = Math.min(accGold, ijw);
-    const makingChargesOnAccumulatedGoldPortion = (mcp / 100) * (goldWeightEligibleForMcDiscount * cgp);
-    const potentialMcDiscount = MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD * makingChargesOnAccumulatedGoldPortion;
+    // Calculate potential discount based on the making charges of the *entire* accumulated gold
+    const makingChargesOnFullAccumulatedGold = (mcp / 100) * (accGold * cgp);
+    const schemeBenefitBasedOnAccumulatedGold = MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD * makingChargesOnFullAccumulatedGold;
 
+    // This potential discount cannot exceed the actual making charges of the jewellery being purchased (makingChargesForInvoice)
+    const potentialMcDiscount = Math.min(schemeBenefitBasedOnAccumulatedGold, makingChargesForInvoice);
+    
     const appliedCapPercentage = isPrematureRedemption
       ? prematureRedemptionCapPercentage
       : (MAKING_CHARGE_DISCOUNT_CAP_PERCENTAGE_OF_TOTAL_INVOICE * 100);
 
+    // Cap amount calculation based on redemption type
     const capAmountForMcDiscount = isPrematureRedemption
       ? (appliedCapPercentage / 100) * yourGoldValue // Cap based on accumulated gold value if premature
-      : (appliedCapPercentage / 100) * totalInvoice; // Cap based on total invoice if not premature
+      : (appliedCapPercentage / 100) * totalInvoice; // Cap based on total invoice value if not premature
 
     const finalMakingChargeDiscount = Math.min(potentialMcDiscount, capAmountForMcDiscount);
 
@@ -267,7 +271,7 @@ export default function GoldenGainTrackerPage() {
                             ) : (
                                 <p>• You have a surplus of {formatNumber(Math.abs(calculationResults.additionalGoldGrams), 3)}g worth {formatCurrency(Math.abs(calculationResults.additionalGoldValue))}.</p>
                             )}
-                            <p>• {MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD * 100}% discount on making charges for your accumulated gold ({formatCurrency(calculationResults.invoiceMakingChargeDiscount)}).</p>
+                            <p>• Making charge discount from scheme: {formatCurrency(calculationResults.invoiceMakingChargeDiscount)}.</p>
                              <p>
                                 • Discount capped at {formatNumber(calculationResults.appliedMakingChargeDiscountCapPercentage, 0)}%
                                 {calculationResults.isPrematureRedemption 
@@ -310,7 +314,7 @@ export default function GoldenGainTrackerPage() {
                         <CardContent className="text-sm text-muted-foreground space-y-1">
                             <p>• Enter your accumulated gold weight from schemes.</p>
                             <p>• Add the weight of jewellery you want to purchase.</p>
-                            <p>• Get {MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD * 100}% discount on making charges for your accumulated gold portion.</p>
+                            <p>• Get {MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD * 100}% discount on making charges for your accumulated gold portion (see detailed breakdown).</p>
                              {calculationResults.isPrematureRedemption ? (
                                 <p>• For premature redemption, your making charge discount cap is set to {formatNumber(calculationResults.appliedMakingChargeDiscountCapPercentage,0)}% of your accumulated gold's value.</p>
                               ) : (

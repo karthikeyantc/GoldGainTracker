@@ -127,7 +127,7 @@ export function CalculatorResults({ results, formatCurrency, formatNumber }: Cal
             <h4 className="font-semibold text-green-700 dark:text-green-300 mb-1">Step 3: Apply Deductions</h4>
             <DetailRow label="Your Gold Value Deduction" value={`-${formatCurrency(results.invoiceGoldValueDeduction)}`} />
             <DetailRow 
-              label={`Making Charge Discount (${mcDiscountPercentageDisplay}% on your gold portion, capped at ${formatNumber(results.appliedMakingChargeDiscountCapPercentage,0)}%${results.isPrematureRedemption ? " of Acc. Gold Value - Premature" : " of Total Invoice"})`} 
+              label={`Making Charge Discount (Capped at ${formatNumber(results.appliedMakingChargeDiscountCapPercentage,0)}%${results.isPrematureRedemption ? " of Acc. Gold Value (Premature)" : " of Total Invoice"})`} 
               value={`-${formatCurrency(results.invoiceMakingChargeDiscount)}`} 
             />
             <DetailRow label="Total Savings" value={formatCurrency(results.invoiceTotalSavings)} />

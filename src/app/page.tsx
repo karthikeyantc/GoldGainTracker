@@ -48,7 +48,7 @@ export default function GoldenGainTrackerPage() {
   const handleCalculatorInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setCalculatorInputs(prev => ({ ...prev, [name]: value }));
-    setCalculationResults(null); 
+    setCalculationResults(null);
   };
 
   const handleCheckboxChange = (checked: boolean) => {
@@ -68,9 +68,9 @@ export default function GoldenGainTrackerPage() {
     const { name, value } = e.target;
     const parsedValue = value ? parseFloat(value) : undefined;
     setForecastInputs(prev => ({ ...prev, [name]: parsedValue }));
-    setForecastResult(null); 
+    setForecastResult(null);
   };
-  
+
   const prefillForecastInputs = useCallback(() => {
     setForecastInputs(prev => ({
         ...prev,
@@ -83,7 +83,16 @@ export default function GoldenGainTrackerPage() {
 
   const performCalculations = () => {
     setIsCalculating(true);
-    const { accumulatedGoldGrams, intendedJewelleryWeight, currentGoldPrice, makingChargePercentage, isPrematureRedemption, prematureRedemptionCapPercentage } = calculatorInputs;
+    setCalculationResults(null); // Clear previous results immediately
+
+    const {
+      accumulatedGoldGrams,
+      intendedJewelleryWeight,
+      currentGoldPrice,
+      makingChargePercentage,
+      isPrematureRedemption,
+      prematureRedemptionCapPercentage
+    } = calculatorInputs;
 
     const accGold = parseFloat(accumulatedGoldGrams);
     const ijw = parseFloat(intendedJewelleryWeight);
@@ -95,71 +104,65 @@ export default function GoldenGainTrackerPage() {
       setIsCalculating(false);
       return;
     }
-    
-    setTimeout(() => {
-      const yourGoldValue = accGold * cgp;
-      const additionalGoldGrams = Math.max(0, ijw - accGold); // Can be 0 if accGold >= ijw
-      const additionalGoldValue = additionalGoldGrams * cgp;
 
-      const baseJewelleryCostForInvoice = ijw * cgp;
-      const makingChargesForInvoice = (mcp / 100) * baseJewelleryCostForInvoice;
-      const subtotalBeforeGst = baseJewelleryCostForInvoice + makingChargesForInvoice;
-      const gstAmount = GST_RATE * subtotalBeforeGst;
-      const totalInvoice = subtotalBeforeGst + gstAmount;
-      const goldValueDeduction = yourGoldValue;
+    // All calculations are now synchronous
+    const yourGoldValue = accGold * cgp;
+    const additionalGoldGrams = Math.max(0, ijw - accGold);
+    const additionalGoldValue = additionalGoldGrams * cgp;
 
-      const goldWeightEligibleForMcDiscount = Math.min(accGold, ijw);
-      const makingChargesOnAccumulatedGoldPortion = (mcp / 100) * (goldWeightEligibleForMcDiscount * cgp);
-      const potentialMcDiscount = MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD * makingChargesOnAccumulatedGoldPortion;
-      
-      const actualMcDiscountCapPercentage = isPrematureRedemption 
-        ? prematureRedemptionCapPercentage // Uses the slider value from state
-        : (MAKING_CHARGE_DISCOUNT_CAP_PERCENTAGE_OF_TOTAL_INVOICE * 100); // Standard 12%
+    const baseJewelleryCostForInvoice = ijw * cgp;
+    const makingChargesForInvoice = (mcp / 100) * baseJewelleryCostForInvoice;
+    const subtotalBeforeGst = baseJewelleryCostForInvoice + makingChargesForInvoice;
+    const gstAmount = GST_RATE * subtotalBeforeGst;
+    const totalInvoice = subtotalBeforeGst + gstAmount;
+    const goldValueDeduction = yourGoldValue;
 
-      const capAmountForMcDiscount = (actualMcDiscountCapPercentage / 100) * totalInvoice;
-      const finalMakingChargeDiscount = Math.min(potentialMcDiscount, capAmountForMcDiscount);
+    const goldWeightEligibleForMcDiscount = Math.min(accGold, ijw);
+    const makingChargesOnAccumulatedGoldPortion = (mcp / 100) * (goldWeightEligibleForMcDiscount * cgp);
+    const potentialMcDiscount = MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD * makingChargesOnAccumulatedGoldPortion;
 
-      const totalSavings = goldValueDeduction + finalMakingChargeDiscount;
-      let finalAmountToPayCalculated = totalInvoice - totalSavings;
-      // Ensure final amount is not negative; if savings exceed invoice, it's 0.
-      finalAmountToPayCalculated = Math.max(0, finalAmountToPayCalculated);
+    const actualMcDiscountCapPercentage = isPrematureRedemption
+      ? prematureRedemptionCapPercentage
+      : (MAKING_CHARGE_DISCOUNT_CAP_PERCENTAGE_OF_TOTAL_INVOICE * 100);
 
-      // If accumulated gold is more than or equal to intended jewellery weight,
-      // additional gold needed is 0 or negative (surplus).
-      // The `additionalGoldValue` will be 0 or negative in this case based on `additionalGoldGrams`.
-      const displayAdditionalGoldGrams = ijw - accGold; // This can be negative for surplus display
-      const displayAdditionalGoldValue = displayAdditionalGoldGrams * cgp;
+    const capAmountForMcDiscount = (actualMcDiscountCapPercentage / 100) * totalInvoice;
+    const finalMakingChargeDiscount = Math.min(potentialMcDiscount, capAmountForMcDiscount);
 
+    const totalSavings = goldValueDeduction + finalMakingChargeDiscount;
+    let finalAmountToPayCalculated = totalInvoice - totalSavings;
+    finalAmountToPayCalculated = Math.max(0, finalAmountToPayCalculated);
 
-      setCalculationResults({
-        inputAccumulatedGoldGrams: accGold,
-        inputIntendedJewelleryWeight: ijw,
-        inputCurrentGoldPrice: cgp,
-        inputMakingChargePercentage: mcp,
-        isPrematureRedemption: isPrematureRedemption,
-        appliedMakingChargeDiscountCapPercentage: actualMcDiscountCapPercentage,
+    const displayAdditionalGoldGrams = ijw - accGold;
+    const displayAdditionalGoldValue = displayAdditionalGoldGrams * cgp;
 
-        yourGoldValue,
-        additionalGoldGrams: displayAdditionalGoldGrams, // Use potentially negative value for display logic
-        additionalGoldValue: displayAdditionalGoldValue, // Use potentially negative value for display logic
+    setCalculationResults({
+      inputAccumulatedGoldGrams: accGold,
+      inputIntendedJewelleryWeight: ijw,
+      inputCurrentGoldPrice: cgp,
+      inputMakingChargePercentage: mcp,
+      isPrematureRedemption: isPrematureRedemption,
+      appliedMakingChargeDiscountCapPercentage: actualMcDiscountCapPercentage,
 
-        goldAnalysisYouHaveGrams: accGold,
-        goldAnalysisYouHaveWorth: yourGoldValue,
-        goldAnalysisNeedAdditionalGrams: displayAdditionalGoldGrams, // For Gold Analysis card
-        goldAnalysisNeedAdditionalWorth: displayAdditionalGoldValue, // For Gold Analysis card
+      yourGoldValue,
+      additionalGoldGrams: displayAdditionalGoldGrams,
+      additionalGoldValue: displayAdditionalGoldValue,
 
-        invoiceBaseJewelleryCost: baseJewelleryCostForInvoice,
-        invoiceMakingCharges: makingChargesForInvoice,
-        invoiceSubtotalBeforeGst: subtotalBeforeGst,
-        invoiceGstAmount: gstAmount,
-        invoiceTotalInvoice: totalInvoice,
-        invoiceGoldValueDeduction: goldValueDeduction,
-        invoiceMakingChargeDiscount: finalMakingChargeDiscount,
-        invoiceTotalSavings: totalSavings,
-        finalAmountToPay: finalAmountToPayCalculated,
-      });
-      setIsCalculating(false);
-    }, 500);
+      goldAnalysisYouHaveGrams: accGold,
+      goldAnalysisYouHaveWorth: yourGoldValue,
+      goldAnalysisNeedAdditionalGrams: displayAdditionalGoldGrams,
+      goldAnalysisNeedAdditionalWorth: displayAdditionalGoldValue,
+
+      invoiceBaseJewelleryCost: baseJewelleryCostForInvoice,
+      invoiceMakingCharges: makingChargesForInvoice,
+      invoiceSubtotalBeforeGst: subtotalBeforeGst,
+      invoiceGstAmount: gstAmount,
+      invoiceTotalInvoice: totalInvoice,
+      invoiceGoldValueDeduction: goldValueDeduction,
+      invoiceMakingChargeDiscount: finalMakingChargeDiscount,
+      invoiceTotalSavings: totalSavings,
+      finalAmountToPay: finalAmountToPayCalculated,
+    });
+    setIsCalculating(false);
   };
 
   const handleForecastSubmit = async () => {
@@ -174,7 +177,7 @@ export default function GoldenGainTrackerPage() {
        setIsForecasting(false);
        return;
     }
-    
+
     try {
       const result = await generateInvestmentForecast(forecastInputs as InvestmentForecastInput);
       setForecastResult(result);
@@ -185,7 +188,7 @@ export default function GoldenGainTrackerPage() {
       setIsForecasting(false);
     }
   };
-  
+
   return (
     <div className="min-h-screen bg-background text-foreground p-4 md:p-8">
       <header className="text-center mb-12">
@@ -220,9 +223,9 @@ export default function GoldenGainTrackerPage() {
             <CardContent>
               <div className="grid md:grid-cols-2 gap-8">
                 <div>
-                  <CalculatorForm 
-                    inputs={calculatorInputs} 
-                    onInputChange={handleCalculatorInputChange} 
+                  <CalculatorForm
+                    inputs={calculatorInputs}
+                    onInputChange={handleCalculatorInputChange}
                     onCheckboxChange={handleCheckboxChange}
                     onSliderChange={handleSliderChange}
                     onSubmit={performCalculations}
@@ -232,10 +235,10 @@ export default function GoldenGainTrackerPage() {
                 </div>
                 <div className="md:mt-[4.25rem]"> {/* Align with button from form */}
                   {calculationResults ? (
-                    <CalculatorResults 
-                      results={calculationResults} 
-                      formatCurrency={formatCurrency} 
-                      formatNumber={formatNumber} 
+                    <CalculatorResults
+                      results={calculationResults}
+                      formatCurrency={formatCurrency}
+                      formatNumber={formatNumber}
                     />
                   ) : (
                     <div className="text-center py-10 text-muted-foreground h-full flex flex-col justify-center items-center">
@@ -256,8 +259,11 @@ export default function GoldenGainTrackerPage() {
                         </CardHeader>
                         <CardContent className="text-sm text-muted-foreground space-y-2">
                             <p>• Your accumulated gold {formatNumber(calculationResults.inputAccumulatedGoldGrams, 3)}g worth {formatCurrency(calculationResults.yourGoldValue)}.</p>
-                            {calculationResults.additionalGoldGrams > 0 && <p>• Additional gold needed {formatNumber(calculationResults.additionalGoldGrams, 3)}g worth {formatCurrency(calculationResults.additionalGoldValue)}.</p>}
-                            {calculationResults.additionalGoldGrams < 0 && <p>• You have a surplus of {formatNumber(Math.abs(calculationResults.additionalGoldGrams), 3)}g worth {formatCurrency(Math.abs(calculationResults.additionalGoldValue))}.</p>}
+                            {calculationResults.additionalGoldGrams >= 0 ? (
+                                <p>• {calculationResults.additionalGoldGrams > 0 ? `Additional gold needed ${formatNumber(calculationResults.additionalGoldGrams, 3)}g worth ${formatCurrency(calculationResults.additionalGoldValue)}` : "You have the exact amount of gold."}.</p>
+                            ) : (
+                                <p>• You have a surplus of {formatNumber(Math.abs(calculationResults.additionalGoldGrams), 3)}g worth {formatCurrency(Math.abs(calculationResults.additionalGoldValue))}.</p>
+                            )}
                             <p>• {MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD * 100}% discount on making charges for your accumulated gold ({formatCurrency(calculationResults.invoiceMakingChargeDiscount)}).</p>
                             <p>• Discount capped at {formatNumber(calculationResults.appliedMakingChargeDiscountCapPercentage,0)}% of total invoice value {calculationResults.isPrematureRedemption ? "(Premature Redemption)" : ""}.</p>
                             <p>• Total savings from gold value + discount: {formatCurrency(calculationResults.invoiceTotalSavings)}.</p>
@@ -319,7 +325,7 @@ export default function GoldenGainTrackerPage() {
             <CardContent>
                <div className="grid md:grid-cols-2 gap-8">
                 <div>
-                  <InvestmentForecastForm 
+                  <InvestmentForecastForm
                     inputs={forecastInputs}
                     onInputChange={handleForecastInputChange}
                     onSubmit={handleForecastSubmit}
@@ -331,11 +337,11 @@ export default function GoldenGainTrackerPage() {
                 </div>
                  <div>
                    <h3 className="font-headline text-2xl font-semibold mb-4 text-primary">AI Generated Outlook</h3>
-                    <InvestmentForecastResult 
-                      result={forecastResult} 
+                    <InvestmentForecastResult
+                      result={forecastResult}
                       isLoading={isForecasting}
-                      formatCurrency={formatCurrency} 
-                      formatNumber={formatNumber} 
+                      formatCurrency={formatCurrency}
+                      formatNumber={formatNumber}
                     />
                     {!isForecasting && !forecastResult && (
                        <div className="text-center py-10 text-muted-foreground">
@@ -349,7 +355,7 @@ export default function GoldenGainTrackerPage() {
           </Card>
         </TabsContent>
       </Tabs>
-      
+
       <footer className="text-center mt-16 py-8 border-t border-border text-muted-foreground">
         <p>&copy; {new Date().getFullYear()} GoldenGain Tracker. All rights reserved.</p>
         <p className="text-xs mt-1">Your smart companion for gold investments.</p>
@@ -357,3 +363,5 @@ export default function GoldenGainTrackerPage() {
     </div>
   );
 }
+
+    

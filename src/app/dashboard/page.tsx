@@ -5,10 +5,10 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { PlusCircle, ListChecks, Banknote, CalendarClock } from 'lucide-react';
+import { PlusCircle, ListChecks, Banknote, CalendarClock, Eye } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
@@ -127,7 +127,13 @@ export default function DashboardPage() {
                       </div>
                     )}
                   </CardContent>
-                  {/* Add CardFooter for actions later, e.g., View Details button */}
+                  <CardFooter>
+                    <Button asChild variant="outline" className="w-full">
+                      <Link href={`/dashboard/scheme/${scheme.id}`}>
+                        <Eye className="mr-2 h-4 w-4" /> View Details
+                      </Link>
+                    </Button>
+                  </CardFooter>
                 </Card>
               ))}
             </div>

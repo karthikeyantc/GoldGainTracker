@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Gem, TrendingUp, FileText } from 'lucide-react'; 
-import { MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD } from '@/lib/constants'; 
+import { Gem, TrendingUp, FileText, ShoppingBag, Landmark, Percent } from 'lucide-react'; 
+import { MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD, STANDARD_DISCOUNT_RATE_CAP } from '@/lib/constants'; 
 
 export interface CalculationResults {
   inputAccumulatedGoldGrams: number;
@@ -10,7 +10,7 @@ export interface CalculationResults {
   inputCurrentGoldPrice: number;
   inputMakingChargePercentage: number;
   isPrematureRedemption: boolean; 
-  appliedMakingChargeDiscountCapPercentage: number; 
+  appliedMakingChargeDiscountCapPercentage: number; // The actual cap rate used (e.g., 12% or user-selected premature %)
 
   yourGoldValue: number;
   additionalGoldGrams: number;
@@ -22,14 +22,20 @@ export interface CalculationResults {
   goldAnalysisNeedAdditionalWorth: number;
 
   invoiceBaseJewelleryCost: number;
-  invoiceMakingCharges: number;
+  invoiceMakingCharges: number; // This is raw MC on intended jewellery
   invoiceSubtotalBeforeGst: number;
   invoiceGstAmount: number;
   invoiceTotalInvoice: number;
   invoiceGoldValueDeduction: number;
-  invoiceMakingChargeDiscount: number;
+  invoiceMakingChargeDiscount: number; // Final applied MC discount
   invoiceTotalSavings: number;
   finalAmountToPay: number;
+
+  // For detailed breakdown of final amount
+  breakdown_additionalGoldCost: number;
+  breakdown_mcOnAdditionalGold: number;
+  breakdown_netMcOnAccumulatedGold: number;
+  breakdown_gst: number;
 }
 
 interface CalculatorResultsProps {
@@ -38,8 +44,8 @@ interface CalculatorResultsProps {
   formatNumber: (value: number, precision?: number) => string;
 }
 
-const DetailRow: React.FC<{ label: string; value: string; isEmphasized?: boolean; subValue?: string }> = ({ label, value, isEmphasized, subValue }) => (
-  <div className={`flex justify-between items-center py-2 ${isEmphasized ? 'font-semibold text-lg' : 'text-sm'}`}>
+const DetailRow: React.FC<{ label: string; value: string; isEmphasized?: boolean; subValue?: string; className?: string }> = ({ label, value, isEmphasized, subValue, className }) => (
+  <div className={`flex justify-between items-center py-2 ${isEmphasized ? 'font-semibold text-lg' : 'text-sm'} ${className}`}>
     <span className="text-muted-foreground">{label}</span>
     <div className="text-right">
       <span className={isEmphasized ? 'text-primary' : 'text-foreground'}>{value}</span>
@@ -52,7 +58,7 @@ const DetailRow: React.FC<{ label: string; value: string; isEmphasized?: boolean
 export function CalculatorResults({ results, formatCurrency, formatNumber }: CalculatorResultsProps) {
   if (!results) return null;
 
-  const mcDiscountPercentageDisplay = MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD * 100;
+  const potentialDiscountRateDisplay = (results.inputMakingChargePercentage / 100) * MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD * 100;
 
   return (
     <div className="space-y-6">
@@ -127,7 +133,7 @@ export function CalculatorResults({ results, formatCurrency, formatNumber }: Cal
             <h4 className="font-semibold text-green-700 dark:text-green-300 mb-1">Step 3: Apply Deductions</h4>
             <DetailRow label="Your Gold Value Deduction" value={`-${formatCurrency(results.invoiceGoldValueDeduction)}`} />
             <DetailRow 
-              label={`Making Charge Discount (Capped at ${formatNumber(results.appliedMakingChargeDiscountCapPercentage,0)}%${results.isPrematureRedemption ? " of Acc. Gold Value (Premature)" : " of Total Invoice"})`} 
+              label={`Making Charge Discount (Rate: ${formatNumber(potentialDiscountRateDisplay,1)}% of Acc. Gold Value, Capped at ${formatNumber(results.appliedMakingChargeDiscountCapPercentage,0)}% Rate)`}
               value={`-${formatCurrency(results.invoiceMakingChargeDiscount)}`} 
             />
             <DetailRow label="Total Savings" value={formatCurrency(results.invoiceTotalSavings)} />
@@ -138,6 +144,32 @@ export function CalculatorResults({ results, formatCurrency, formatNumber }: Cal
           </div>
         </CardContent>
       </Card>
+
+      {results.finalAmountToPay > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-headline text-xl text-primary flex items-center">
+              <ShoppingBag className="mr-2 h-5 w-5" /> Final Payment Breakdown
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {results.breakdown_additionalGoldCost > 0 && (
+              <DetailRow label="For Additional Gold" value={formatCurrency(results.breakdown_additionalGoldCost)} />
+            )}
+            {results.breakdown_mcOnAdditionalGold > 0 && (
+              <DetailRow label="Making Charges (on Additional Gold)" value={formatCurrency(results.breakdown_mcOnAdditionalGold)} />
+            )}
+            {results.breakdown_netMcOnAccumulatedGold > 0 && (
+                 <DetailRow label="Making Charges (on Your Gold Portion, Net of Discount)" value={formatCurrency(results.breakdown_netMcOnAccumulatedGold)} />
+            )}
+             <DetailRow label="GST (on Original Invoice)" value={formatCurrency(results.breakdown_gst)} />
+             <hr className="my-2 border-dashed border-border" />
+             <DetailRow label="Total Payable (Reconciled)" value={formatCurrency(results.finalAmountToPay)} isEmphasized className="text-amber-700 dark:text-amber-500" />
+          </CardContent>
+        </Card>
+      )}
+
     </div>
   );
 }
+

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Gem, TrendingUp, FileText } from 'lucide-react'; 
-import { MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD } from '@/lib/constants'; // Removed unused MAKING_CHARGE_DISCOUNT_CAP_PERCENTAGE_OF_TOTAL_INVOICE
+import { MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD } from '@/lib/constants'; 
 
 export interface CalculationResults {
   inputAccumulatedGoldGrams: number;
@@ -65,7 +65,7 @@ export function CalculatorResults({ results, formatCurrency, formatNumber }: Cal
         <CardContent className="space-y-2">
           <DetailRow label="Your Gold Value" value={formatCurrency(results.yourGoldValue)} />
           <DetailRow label="Total Jewelry Weight" value={`${formatNumber(results.inputIntendedJewelleryWeight, 3)} g`} />
-          {results.additionalGoldGrams >= 0 ? ( // Check if it's zero or positive for "Needed" or "Exact"
+          {results.additionalGoldGrams >= 0 ? ( 
             <DetailRow 
               label="Additional Gold Needed" 
               value={`${formatNumber(results.additionalGoldGrams, 3)} g`}
@@ -127,7 +127,7 @@ export function CalculatorResults({ results, formatCurrency, formatNumber }: Cal
             <h4 className="font-semibold text-green-700 dark:text-green-300 mb-1">Step 3: Apply Deductions</h4>
             <DetailRow label="Your Gold Value Deduction" value={`-${formatCurrency(results.invoiceGoldValueDeduction)}`} />
             <DetailRow 
-              label={`Making Charge Discount (${mcDiscountPercentageDisplay}% on your gold portion, capped at ${formatNumber(results.appliedMakingChargeDiscountCapPercentage,0)}%${results.isPrematureRedemption ? " - Premature" : ""})`} 
+              label={`Making Charge Discount (${mcDiscountPercentageDisplay}% on your gold portion, capped at ${formatNumber(results.appliedMakingChargeDiscountCapPercentage,0)}%${results.isPrematureRedemption ? " of Acc. Gold Value - Premature" : " of Total Invoice"})`} 
               value={`-${formatCurrency(results.invoiceMakingChargeDiscount)}`} 
             />
             <DetailRow label="Total Savings" value={formatCurrency(results.invoiceTotalSavings)} />

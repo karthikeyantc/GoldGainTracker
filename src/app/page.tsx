@@ -169,7 +169,7 @@ export default function GoldenGainTrackerPage() {
             <ThemeToggle />
         </div>
         <p className="text-muted-foreground mt-2 text-lg">
-          Plan your gold investments and jewellery purchases with ease.
+          This is a Gold Investment scheme tracker built for the Tanishq's Rivaah Gold Advantage savings scheme.
         </p>
       </header>
 

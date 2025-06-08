@@ -68,7 +68,7 @@ export default function CreateSchemePage() {
         userId: user.uid,
         schemeName: formData.schemeName.trim(),
         investmentType: formData.investmentType,
-        startDate: serverTimestamp(), // Will be set by Firestore
+        startDate: new Date(), // Use client-side date
         totalInvestedAmount: amount,
         totalAccumulatedGoldGrams: 0, // Will be calculated after first transaction
         status: 'ongoing',
@@ -90,6 +90,10 @@ export default function CreateSchemePage() {
   };
   
   if (!user) {
+     // Redirect in layout, but good to have a fallback or message
+     React.useEffect(() => {
+        router.push('/auth');
+     }, [router]);
      return <div className="flex justify-center items-center min-h-screen">Redirecting to login...</div>;
   }
 

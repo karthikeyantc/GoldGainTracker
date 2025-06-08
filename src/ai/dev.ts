@@ -1,4 +1,7 @@
+
 import { config } from 'dotenv';
 config();
 
-import '@/ai/flows/investment-forecast.ts';
+// Removed: import '@/ai/flows/investment-forecast.ts';
+
+    

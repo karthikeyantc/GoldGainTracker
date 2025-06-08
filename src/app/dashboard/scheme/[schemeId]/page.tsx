@@ -5,20 +5,31 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, Timestamp, updateDoc, arrayUnion, increment } from 'firebase/firestore'; // Removed serverTimestamp as it's not used directly here anymore
+import { doc, getDoc, Timestamp, updateDoc, arrayUnion, increment, deleteDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Banknote, CalendarClock, Edit, Coins, Hourglass, CheckCircle2, XCircle, PlusCircle, Landmark, GaugeIcon, ListOrdered } from 'lucide-react';
+import { ArrowLeft, Banknote, CalendarClock, Coins, Hourglass, CheckCircle2, XCircle, PlusCircle, Landmark, GaugeIcon, ListOrdered, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Transaction {
-  date: Date; // Firestore Timestamps will be converted to Date objects
+  date: Date;
   investedAmount: number;
   goldRate: number;
   goldPurchasedGrams: number;
@@ -51,6 +62,7 @@ export default function SchemeDetailPage() {
   const [newTransactionAmount, setNewTransactionAmount] = useState('');
   const [newTransactionGoldRate, setNewTransactionGoldRate] = useState('');
   const [isLoggingTransaction, setIsLoggingTransaction] = useState(false);
+  const [isDeletingScheme, setIsDeletingScheme] = useState(false);
 
   const fetchSchemeData = useCallback(async () => {
     if (!user || !schemeId) return;
@@ -120,7 +132,7 @@ export default function SchemeDetailPage() {
     try {
         const goldPurchased = amount / rate;
         const newTransactionData = {
-            date: new Date(), // Use client-side date
+            date: new Date(),
             investedAmount: amount,
             goldRate: rate,
             goldPurchasedGrams: goldPurchased,
@@ -133,7 +145,6 @@ export default function SchemeDetailPage() {
             totalAccumulatedGoldGrams: increment(goldPurchased),
         });
         
-        // Refetch data to show the new transaction and updated totals
         await fetchSchemeData(); 
 
         setNewTransactionAmount('');
@@ -146,7 +157,22 @@ export default function SchemeDetailPage() {
     } finally {
         setIsLoggingTransaction(false);
     }
-};
+  };
+
+  const handleDeleteScheme = async () => {
+    if (!scheme || !user) return;
+    setIsDeletingScheme(true);
+    try {
+      const schemeDocRef = doc(db, 'investmentSchemes', scheme.id);
+      await deleteDoc(schemeDocRef);
+      toast({ title: "Scheme Deleted", description: `Scheme "${scheme.schemeName}" has been successfully deleted.` });
+      router.push('/dashboard');
+    } catch (error) {
+      console.error("Error deleting scheme: ", error);
+      toast({ title: "Error Deleting Scheme", description: "Could not delete the scheme. Please try again.", variant: "destructive" });
+      setIsDeletingScheme(false);
+    }
+  };
 
 
   if (authLoading || isLoadingScheme) {
@@ -215,10 +241,31 @@ export default function SchemeDetailPage() {
             <p className="font-medium">{scheme.createdAt ? format(scheme.createdAt, 'dd MMM yyyy, hh:mm a') : 'N/A'}</p>
           </div>
         </CardContent>
-        {/* <CardFooter>
-            {/* Future: Button to edit scheme details if applicable
-            {/* <Button variant="outline"><Edit className="mr-2 h-4 w-4" /> Edit Scheme (Coming Soon)</Button>
-        </CardFooter> */}
+         <CardFooter className="flex justify-end">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" disabled={isDeletingScheme}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {isDeletingScheme ? 'Deleting...' : 'Delete Scheme'}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the scheme
+                    "{scheme.schemeName}" and all its associated data.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeletingScheme}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteScheme} disabled={isDeletingScheme} className="bg-destructive hover:bg-destructive/90">
+                    {isDeletingScheme ? 'Deleting...' : 'Yes, delete scheme'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+        </CardFooter>
       </Card>
 
       <Card className="w-full shadow-xl mb-8">

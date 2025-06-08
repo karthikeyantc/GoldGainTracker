@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 import { GST_RATE, MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD, STANDARD_DISCOUNT_RATE_CAP } from '@/lib/constants';
 import { useToast } from "@/hooks/use-toast";
-import { Calculator, Gem, FileTextIcon, Activity, BookOpen, ListChecks, LogIn, LogOut, LayoutDashboard } from 'lucide-react';
+import { Calculator, Gem, FileText, Activity, BookOpen, ListChecks, LogIn, LogOut, LayoutDashboard } from 'lucide-react';
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
@@ -234,7 +234,7 @@ export default function GoldenGainTrackerPage() {
                         <CardHeader>
                             <UICardTitle className="flex flex-row items-center justify-between space-y-0 pb-2 text-sm font-medium text-muted-foreground">
                                 Calculation Summary
-                                <FileTextIcon className="h-5 w-5 text-accent" />
+                                <FileText className="h-5 w-5 text-accent" />
                             </UICardTitle>
                         </CardHeader>
                         <CardContent className="text-sm text-muted-foreground space-y-2">
@@ -306,3 +306,5 @@ export default function GoldenGainTrackerPage() {
     </div>
   );
 }
+
+    

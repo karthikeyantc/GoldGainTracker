@@ -14,6 +14,12 @@ import { Calculator, Gem, FileText, Activity, BookOpen, LogIn, LogOut, LayoutDas
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
+import type { InvestmentForecastInput, InvestmentForecastOutput } from '@/ai/flows/investment-forecast';
+import { investmentForecast } from '@/ai/flows/investment-forecast';
+import { InvestmentForecastForm } from '@/components/forecast/InvestmentForecastForm';
+import { InvestmentForecastResult } from '@/components/forecast/InvestmentForecastResult';
+import { SectionTitle } from '@/components/shared/SectionTitle';
+
 
 const initialCalculatorInputs: CalculatorInputState = {
   accumulatedGoldGrams: '',
@@ -24,13 +30,27 @@ const initialCalculatorInputs: CalculatorInputState = {
   prematureRedemptionCapPercentage: 11,
 };
 
+const initialForecastInputs: Partial<InvestmentForecastInput> = {
+  monthlyInvestment: undefined,
+  monthsPaid: undefined,
+  currentGoldPrice: undefined,
+  intendedJewelleryWeight: undefined,
+  makingChargePercentage: undefined,
+};
+
+
 export default function GoldenGainTrackerPage() {
   const [calculatorInputs, setCalculatorInputs] = useState<CalculatorInputState>(initialCalculatorInputs);
   const [calculationResults, setCalculationResults] = useState<CalculationResults | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
 
+  const [forecastInputs, setForecastInputs] = useState<Partial<InvestmentForecastInput>>(initialForecastInputs);
+  const [forecastResult, setForecastResult] = useState<InvestmentForecastOutput | null>(null);
+  const [isForecasting, setIsForecasting] = useState(false);
+
+
   const { toast } = useToast();
-  const { user, loading, signOutUser } = useAuth();
+  const { user, loading: authLoading, signOutUser } = useAuth();
 
   const handleCalculatorInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -149,6 +169,51 @@ export default function GoldenGainTrackerPage() {
     });
     setIsCalculating(false);
   }, [calculatorInputs, toast]);
+
+  const handleForecastInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setForecastInputs(prev => ({ ...prev, [name]: value ? parseFloat(value) : undefined }));
+    setForecastResult(null);
+  };
+
+  const handleForecastSubmit = async () => {
+    const { monthlyInvestment, monthsPaid, currentGoldPrice, intendedJewelleryWeight, makingChargePercentage } = forecastInputs;
+
+    if (
+      monthlyInvestment === undefined || monthsPaid === undefined || currentGoldPrice === undefined ||
+      intendedJewelleryWeight === undefined || makingChargePercentage === undefined ||
+      monthlyInvestment <=0 || monthsPaid <=0 || currentGoldPrice <=0 || intendedJewelleryWeight <=0 || makingChargePercentage <0
+    ) {
+      toast({
+        title: "Invalid Forecast Input",
+        description: "Please fill all fields with valid positive numbers. Making charge can be zero.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsForecasting(true);
+    setForecastResult(null);
+    try {
+      const result = await investmentForecast({
+        monthlyInvestment,
+        monthsPaid,
+        currentGoldPrice,
+        intendedJewelleryWeight,
+        makingChargePercentage,
+      });
+      setForecastResult(result);
+    } catch (error) {
+      console.error("Error fetching forecast:", error);
+      toast({
+        title: "Forecast Error",
+        description: "Could not generate forecast. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsForecasting(false);
+    }
+  };
 
   console.log('Pre-render log for GoldenGainTrackerPage');
   return (<div>Test Page</div>);

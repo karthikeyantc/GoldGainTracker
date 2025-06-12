@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, PiggyBank, Edit3 } from 'lucide-react';
+import { ArrowLeft, PiggyBank, Edit3, GaugeIcon } from 'lucide-react';
 import Link from 'next/link';
 
 type InvestmentType = 'monthly' | 'lumpsum';
@@ -20,13 +20,15 @@ type InvestmentType = 'monthly' | 'lumpsum';
 interface SchemeFormData {
   schemeName: string;
   investmentType: InvestmentType;
-  initialInvestmentAmount: string; // Stored as string for input, converted to number on save
+  initialInvestmentAmount: string;
+  initialGoldRate: string; // Added for the gold rate of the first transaction
 }
 
 const initialFormData: SchemeFormData = {
   schemeName: '',
   investmentType: 'monthly',
   initialInvestmentAmount: '',
+  initialGoldRate: '', // Initialize new field
 };
 
 export default function CreateSchemePage() {
@@ -60,26 +62,38 @@ export default function CreateSchemePage() {
       toast({ title: 'Validation Error', description: 'Please enter a valid positive investment amount.', variant: 'destructive' });
       return;
     }
+    const goldRate = parseFloat(formData.initialGoldRate);
+    if (isNaN(goldRate) || goldRate <= 0) {
+      toast({ title: 'Validation Error', description: 'Please enter a valid positive gold rate for the initial investment.', variant: 'destructive' });
+      return;
+    }
 
     setIsSubmitting(true);
 
     try {
+      const initialGoldPurchasedGrams = amount / goldRate;
+      const initialTransaction = {
+        date: new Date(), // Client-side date for consistency
+        investedAmount: amount,
+        goldRate: goldRate,
+        goldPurchasedGrams: initialGoldPurchasedGrams,
+      };
+
       const schemeData = {
         userId: user.uid,
         schemeName: formData.schemeName.trim(),
         investmentType: formData.investmentType,
         startDate: new Date(), // Use client-side date
         totalInvestedAmount: amount,
-        totalAccumulatedGoldGrams: 0, // Will be calculated after first transaction
+        totalAccumulatedGoldGrams: initialGoldPurchasedGrams, // Calculated initial gold
         status: 'ongoing',
         createdAt: serverTimestamp(),
-        // Transactions will be a subcollection or an array, initialize empty for now
-        transactions: [], 
+        transactions: [initialTransaction], // Store the first transaction
       };
 
       await addDoc(collection(db, 'investmentSchemes'), schemeData);
 
-      toast({ title: 'Success!', description: `Scheme "${formData.schemeName}" created successfully.` });
+      toast({ title: 'Success!', description: `Scheme "${formData.schemeName}" created successfully with the first investment logged.` });
       router.push('/dashboard');
     } catch (error) {
       console.error('Error creating scheme:', error);
@@ -90,7 +104,6 @@ export default function CreateSchemePage() {
   };
   
   if (!user) {
-     // Redirect in layout, but good to have a fallback or message
      React.useEffect(() => {
         router.push('/auth');
      }, [router]);
@@ -109,7 +122,7 @@ export default function CreateSchemePage() {
           <CardTitle className="font-headline text-2xl flex items-center">
             <Edit3 className="mr-2 h-6 w-6 text-primary" /> Create New Investment Scheme
           </CardTitle>
-          <CardDescription>Define the details for your new gold investment scheme.</CardDescription>
+          <CardDescription>Define the details for your new gold investment scheme and log the first payment.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -159,10 +172,27 @@ export default function CreateSchemePage() {
               />
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="initialGoldRate" className="flex items-center">
+                <GaugeIcon className="mr-2 h-4 w-4 text-muted-foreground"/> Gold Rate for Initial Investment (₹/gram)
+              </Label>
+              <Input
+                id="initialGoldRate"
+                name="initialGoldRate"
+                type="number"
+                value={formData.initialGoldRate}
+                onChange={handleInputChange}
+                placeholder="e.g., 7000"
+                min="0.01"
+                step="0.01"
+                required
+              />
+            </div>
+
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? 'Creating Scheme...' : (
                 <>
-                  <PiggyBank className="mr-2 h-5 w-5" /> Create Scheme
+                  <PiggyBank className="mr-2 h-5 w-5" /> Create Scheme & Log First Investment
                 </>
               )}
             </Button>

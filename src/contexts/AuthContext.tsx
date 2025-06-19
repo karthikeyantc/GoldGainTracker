@@ -3,7 +3,7 @@
 
 import type React from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { type User, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, type AuthError } from 'firebase/auth';
+import { type User, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, type AuthError } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 
@@ -12,6 +12,7 @@ interface AuthContextType {
   loading: boolean;
   signUpWithEmail: (email: string, pass: string) => Promise<User | AuthError | null>;
   signInWithEmail: (email: string, pass: string) => Promise<User | AuthError | null>;
+  signInWithGoogle: () => Promise<User | AuthError | null>;
   signOutUser: () => Promise<void>;
 }
 
@@ -58,6 +59,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithGoogle = async (): Promise<User | AuthError | null> => {
+    setLoading(true);
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      setUser(result.user);
+      return result.user;
+    } catch (error) {
+      console.error("Error signing in with Google:", error);
+      return error as AuthError;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const signOutUser = async () => {
     setLoading(true);
     try {
@@ -76,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     signUpWithEmail,
     signInWithEmail,
+    signInWithGoogle,
     signOutUser,
   };
 

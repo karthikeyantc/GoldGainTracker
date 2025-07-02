@@ -5,13 +5,13 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, Timestamp, updateDoc, arrayUnion, increment, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, Timestamp, updateDoc, arrayUnion, increment, deleteDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Banknote, Coins, Hourglass, CheckCircle2, XCircle, PlusCircle, Landmark, GaugeIcon, ListOrdered, Trash2, Edit, Receipt, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Banknote, Coins, Hourglass, CheckCircle2, XCircle, PlusCircle, Landmark, GaugeIcon, ListOrdered, Trash2, Edit, Receipt, RotateCcw, CalendarIcon } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
@@ -29,8 +29,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { RedemptionForm, type RedemptionInputState } from '@/components/dashboard/RedemptionForm';
 import { RedemptionResultsDisplay } from '@/components/dashboard/RedemptionResultsDisplay';
-import type { CalculationResults } from '@/components/calculator/CalculatorResults'; // Re-using this type
+import type { CalculationResults } from '@/components/calculator/CalculatorResults';
 import { GST_RATE, MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD, STANDARD_DISCOUNT_RATE_CAP } from '@/lib/constants';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 interface Transaction {
   date: Date;
@@ -64,7 +67,7 @@ const initialRedemptionInputs: RedemptionInputState = {
   currentGoldPrice: '',
   makingChargePercentage: '',
   isPrematureRedemption: false,
-  prematureRedemptionCapPercentage: 11, // Default as in calculator
+  prematureRedemptionCapPercentage: 11,
 };
 
 
@@ -81,6 +84,7 @@ export default function SchemeDetailPage() {
 
   const [newTransactionAmount, setNewTransactionAmount] = useState('');
   const [newTransactionGoldRate, setNewTransactionGoldRate] = useState('');
+  const [newTransactionDate, setNewTransactionDate] = useState<Date | undefined>(new Date());
   const [isLoggingTransaction, setIsLoggingTransaction] = useState(false);
   const [isDeletingScheme, setIsDeletingScheme] = useState(false);
 
@@ -123,7 +127,6 @@ export default function SchemeDetailPage() {
               redeemedAt: data.redemptionDetails.redeemedAt instanceof Timestamp ? data.redemptionDetails.redeemedAt.toDate() : new Date(),
             } : null,
           });
-          // If redemption details exist, don't automatically open the form
           if (data.redemptionDetails) {
             setIsRedemptionFormOpen(false);
           }
@@ -160,11 +163,16 @@ export default function SchemeDetailPage() {
         toast({ title: "Invalid Input", description: "Please enter valid positive numbers for amount and gold rate.", variant: "destructive" });
         return;
     }
+    if (!newTransactionDate) {
+        toast({ title: "Invalid Input", description: "Please select an investment date.", variant: "destructive" });
+        return;
+    }
+
     setIsLoggingTransaction(true);
     try {
         const goldPurchased = amount / rate;
         const newTransactionData = {
-            date: new Date(), // Client-side date
+            date: newTransactionDate,
             investedAmount: amount,
             goldRate: rate,
             goldPurchasedGrams: goldPurchased,
@@ -181,6 +189,7 @@ export default function SchemeDetailPage() {
 
         setNewTransactionAmount('');
         setNewTransactionGoldRate('');
+        setNewTransactionDate(new Date());
         toast({ title: "Success", description: "Investment logged successfully." });
 
     } catch (error) {
@@ -233,7 +242,7 @@ export default function SchemeDetailPage() {
       prematureRedemptionCapPercentage
     } = currentRedemptionInputs;
 
-    const accGold = scheme.totalAccumulatedGoldGrams; // From scheme
+    const accGold = scheme.totalAccumulatedGoldGrams;
     const ijw = parseFloat(intendedJewelleryWeight);
     const cgp = parseFloat(currentGoldPrice);
     const mcpInput = parseFloat(makingChargePercentage);
@@ -320,12 +329,12 @@ export default function SchemeDetailPage() {
   const handleSaveRedemption = async () => {
     if (!scheme || !user) return;
     const calculationResults = performRedemptionCalculations();
-    if (!calculationResults) return; // Error toast already shown by performRedemptionCalculations
+    if (!calculationResults) return; 
 
     setIsSavingRedemption(true);
     try {
       const redemptionData: RedemptionData = {
-        inputs: { ...currentRedemptionInputs }, // Save a copy
+        inputs: { ...currentRedemptionInputs }, 
         results: calculationResults,
         redeemedAt: new Date(),
       };
@@ -336,7 +345,7 @@ export default function SchemeDetailPage() {
       });
       toast({ title: "Success", description: "Redemption details saved." });
       setIsRedemptionFormOpen(false);
-      await fetchSchemeData(); // Refresh data
+      await fetchSchemeData();
     } catch (error) {
       console.error("Error saving redemption: ", error);
       toast({ title: "Error", description: "Failed to save redemption details.", variant: "destructive" });
@@ -347,16 +356,15 @@ export default function SchemeDetailPage() {
 
   const handleClearRedemption = async () => {
     if (!scheme || !user) return;
-    // Consider adding a confirmation dialog here as well
-    setIsSavingRedemption(true); // Reuse loading state
+    setIsSavingRedemption(true);
     try {
       const schemeDocRef = doc(db, 'investmentSchemes', scheme.id);
       await updateDoc(schemeDocRef, {
-        redemptionDetails: null, // Or deleteField() if you prefer
-        status: 'ongoing', // Revert status
+        redemptionDetails: null,
+        status: 'ongoing',
       });
       toast({ title: "Success", description: "Redemption details cleared." });
-      await fetchSchemeData(); // Refresh data
+      await fetchSchemeData();
     } catch (error) {
       console.error("Error clearing redemption: ", error);
       toast({ title: "Error", description: "Failed to clear redemption details.", variant: "destructive" });
@@ -374,7 +382,7 @@ export default function SchemeDetailPage() {
     if (scheme?.redemptionDetails?.inputs) {
       setCurrentRedemptionInputs(scheme.redemptionDetails.inputs);
     } else {
-      setCurrentRedemptionInputs(initialRedemptionInputs); // Fallback
+      setCurrentRedemptionInputs(initialRedemptionInputs);
     }
     setIsRedemptionFormOpen(true);
   };
@@ -512,6 +520,32 @@ export default function SchemeDetailPage() {
                       step="0.01"
                   />
               </div>
+              <div>
+                  <Label htmlFor="newTransactionDate" className="flex items-center"><CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Investment Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !newTransactionDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {newTransactionDate ? format(newTransactionDate, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={newTransactionDate}
+                        onSelect={setNewTransactionDate}
+                        disabled={(d) => d > new Date()}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+              </div>
           </CardContent>
           <CardFooter>
               <Button onClick={handleLogInvestment} disabled={isLoggingTransaction} className="w-full md:w-auto">
@@ -536,7 +570,7 @@ export default function SchemeDetailPage() {
                 <li key={index} className="p-4 border rounded-md shadow-sm bg-background/70">
                   <div className="flex justify-between items-start mb-2">
                     <p className="font-semibold text-primary">
-                      {format(transaction.date, 'dd MMM yyyy, hh:mm a')}
+                      {format(transaction.date, 'dd MMM yyyy')}
                     </p>
                     <Badge variant="secondary">{formatCurrency(transaction.investedAmount)}</Badge>
                   </div>

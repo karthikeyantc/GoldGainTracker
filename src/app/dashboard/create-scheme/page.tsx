@@ -12,8 +12,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, PiggyBank, Edit3, GaugeIcon } from 'lucide-react';
+import { ArrowLeft, PiggyBank, Edit3, GaugeIcon, CalendarIcon } from 'lucide-react';
 import Link from 'next/link';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 type InvestmentType = 'monthly' | 'lumpsum';
 
@@ -21,18 +25,19 @@ interface SchemeFormData {
   schemeName: string;
   investmentType: InvestmentType;
   initialInvestmentAmount: string;
-  initialGoldRate: string; // Added for the gold rate of the first transaction
+  initialGoldRate: string;
 }
 
 const initialFormData: SchemeFormData = {
   schemeName: '',
   investmentType: 'monthly',
   initialInvestmentAmount: '',
-  initialGoldRate: '', // Initialize new field
+  initialGoldRate: '',
 };
 
 export default function CreateSchemePage() {
   const [formData, setFormData] = useState<SchemeFormData>(initialFormData);
+  const [date, setDate] = useState<Date | undefined>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
   const router = useRouter();
@@ -57,6 +62,10 @@ export default function CreateSchemePage() {
       toast({ title: 'Validation Error', description: 'Scheme name is required.', variant: 'destructive' });
       return;
     }
+    if (!date) {
+        toast({ title: 'Validation Error', description: 'Please select an investment date.', variant: 'destructive' });
+        return;
+    }
     const amount = parseFloat(formData.initialInvestmentAmount);
     if (isNaN(amount) || amount <= 0) {
       toast({ title: 'Validation Error', description: 'Please enter a valid positive investment amount.', variant: 'destructive' });
@@ -73,7 +82,7 @@ export default function CreateSchemePage() {
     try {
       const initialGoldPurchasedGrams = amount / goldRate;
       const initialTransaction = {
-        date: new Date(), // Client-side date for consistency
+        date: date,
         investedAmount: amount,
         goldRate: goldRate,
         goldPurchasedGrams: initialGoldPurchasedGrams,
@@ -83,12 +92,12 @@ export default function CreateSchemePage() {
         userId: user.uid,
         schemeName: formData.schemeName.trim(),
         investmentType: formData.investmentType,
-        startDate: new Date(), // Use client-side date
+        startDate: date,
         totalInvestedAmount: amount,
-        totalAccumulatedGoldGrams: initialGoldPurchasedGrams, // Calculated initial gold
+        totalAccumulatedGoldGrams: initialGoldPurchasedGrams,
         status: 'ongoing',
         createdAt: serverTimestamp(),
-        transactions: [initialTransaction], // Store the first transaction
+        transactions: [initialTransaction],
       };
 
       await addDoc(collection(db, 'investmentSchemes'), schemeData);
@@ -187,6 +196,33 @@ export default function CreateSchemePage() {
                 step="0.01"
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="investmentDate">Investment Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={setDate}
+                    disabled={(d) => d > new Date()}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>

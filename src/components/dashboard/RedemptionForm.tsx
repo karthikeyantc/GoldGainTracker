@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Coins, Weight, CircleDollarSign, Percent, CalculatorIcon, Sparkles, AlertTriangle } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
+import { LiveGoldPriceFetcher } from '@/components/shared/LiveGoldPriceFetcher';
 
 // Similar to CalculatorInputState but without accumulatedGoldGrams
 export interface RedemptionInputState {
@@ -25,6 +26,7 @@ interface RedemptionFormProps {
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onCheckboxChange: (checked: boolean) => void;
   onSliderChange: (value: number[]) => void;
+  onGoldRateUpdate: (rate: string) => void;
   onSubmit: () => void;
   isLoading?: boolean;
   maxMcDiscountCap: number;
@@ -38,6 +40,7 @@ export function RedemptionForm({
   onInputChange,
   onCheckboxChange,
   onSliderChange,
+  onGoldRateUpdate,
   onSubmit,
   isLoading,
   maxMcDiscountCap
@@ -45,7 +48,6 @@ export function RedemptionForm({
   
   const inputFields = [
     { id: 'intendedJewelleryWeight', label: 'Total Jewelry Weight Desired (g)', type: 'number', placeholder: 'e.g., 6.094g', value: inputs.intendedJewelleryWeight, icon: <Weight {...iconProps} /> },
-    { id: 'currentGoldPrice', label: 'Current Gold Rate at Redemption (₹/gram)', type: 'number', placeholder: 'e.g., ₹7000', value: inputs.currentGoldPrice, icon: <CircleDollarSign {...iconProps} /> },
     { id: 'makingChargePercentage', label: 'Making Charges Percentage (%)', type: 'number', placeholder: 'e.g., 18%', value: inputs.makingChargePercentage, icon: <Percent {...iconProps} /> },
   ];
 
@@ -62,6 +64,26 @@ export function RedemptionForm({
       <h3 className="font-headline text-xl font-semibold text-primary flex items-center">
         Jewellery & Redemption Details
       </h3>
+      
+      <div className="space-y-2">
+        <Label htmlFor={`redemption-currentGoldPrice`} className="flex items-center text-foreground/80">
+          <CircleDollarSign {...iconProps} />
+          Current Gold Rate at Redemption (₹/gram)
+        </Label>
+        <Input
+          id={`redemption-currentGoldPrice`}
+          name="currentGoldPrice"
+          type="number"
+          placeholder="e.g., ₹7000"
+          value={inputs.currentGoldPrice}
+          onChange={onInputChange}
+          className="bg-background/80 border-border focus:ring-primary"
+          min="0"
+          step="0.01"
+        />
+        <LiveGoldPriceFetcher onPriceUpdate={onGoldRateUpdate} />
+      </div>
+
       {inputFields.map(field => (
         <div key={field.id} className="space-y-2">
           <Label htmlFor={`redemption-${field.id}`} className="flex items-center text-foreground/80">

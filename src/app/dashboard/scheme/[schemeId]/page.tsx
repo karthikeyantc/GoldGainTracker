@@ -34,6 +34,8 @@ import { GST_RATE, MAKING_CHARGE_DISCOUNT_PERCENTAGE_ON_ACCUMULATED_GOLD, STANDA
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { EditTransactionDialog } from '@/components/dashboard/EditTransactionDialog';
+import { LiveGoldPriceFetcher } from '@/components/shared/LiveGoldPriceFetcher';
 
 interface Transaction {
   date: Date;
@@ -91,6 +93,8 @@ export default function SchemeDetailPage() {
   const [isRedemptionFormOpen, setIsRedemptionFormOpen] = useState(false);
   const [currentRedemptionInputs, setCurrentRedemptionInputs] = useState<RedemptionInputState>(initialRedemptionInputs);
   const [isSavingRedemption, setIsSavingRedemption] = useState(false);
+  
+  const [editingTransaction, setEditingTransaction] = useState<{ transaction: Transaction, index: number } | null>(null);
 
   const fetchSchemeData = useCallback(async () => {
     if (!user || !schemeId) return;
@@ -199,6 +203,37 @@ export default function SchemeDetailPage() {
         setIsLoggingTransaction(false);
     }
   };
+  
+   const handleUpdateTransaction = async (updatedTransaction: Transaction, originalTransaction: Transaction) => {
+    if (!scheme) return;
+
+    // Calculate differences
+    const amountDifference = updatedTransaction.investedAmount - originalTransaction.investedAmount;
+    const goldDifference = updatedTransaction.goldPurchasedGrams - originalTransaction.goldPurchasedGrams;
+
+    // Create a new transactions array with the updated transaction
+    const updatedTransactions = scheme.transactions.map(t => 
+        (t.date === originalTransaction.date && t.investedAmount === originalTransaction.investedAmount) 
+        ? updatedTransaction 
+        : t
+    );
+
+    try {
+        const schemeDocRef = doc(db, 'investmentSchemes', scheme.id);
+        await updateDoc(schemeDocRef, {
+            transactions: updatedTransactions,
+            totalInvestedAmount: increment(amountDifference),
+            totalAccumulatedGoldGrams: increment(goldDifference),
+        });
+        
+        await fetchSchemeData();
+        setEditingTransaction(null); // Close the modal
+        toast({ title: "Success", description: "Transaction updated successfully." });
+    } catch (error) {
+        console.error("Error updating transaction:", error);
+        toast({ title: "Error", description: "Failed to update transaction.", variant: "destructive" });
+    }
+  };
 
   const handleDeleteScheme = async () => {
     if (!scheme || !user) return;
@@ -229,6 +264,10 @@ export default function SchemeDetailPage() {
 
   const handleRedemptionSliderChange = (value: number[]) => {
     setCurrentRedemptionInputs(prev => ({ ...prev, prematureRedemptionCapPercentage: value[0] }));
+  };
+  
+  const handleRedemptionGoldRateUpdate = (rate: string) => {
+    setCurrentRedemptionInputs(prev => ({ ...prev, currentGoldPrice: rate }));
   };
 
   const performRedemptionCalculations = (): CalculationResults | null => {
@@ -508,7 +547,7 @@ export default function SchemeDetailPage() {
                       step="0.01"
                   />
               </div>
-              <div>
+              <div className="space-y-2">
                   <Label htmlFor="newTransactionGoldRate" className="flex items-center"><GaugeIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Gold Rate on Investment Date (₹/gram)</Label>
                   <Input 
                       id="newTransactionGoldRate" 
@@ -519,6 +558,7 @@ export default function SchemeDetailPage() {
                       min="0.01"
                       step="0.01"
                   />
+                  <LiveGoldPriceFetcher onPriceUpdate={setNewTransactionGoldRate} />
               </div>
               <div>
                   <Label htmlFor="newTransactionDate" className="flex items-center"><CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground"/>Investment Date</Label>
@@ -567,17 +607,22 @@ export default function SchemeDetailPage() {
           {scheme.transactions && scheme.transactions.length > 0 ? (
             <ul className="space-y-4">
               {scheme.transactions.map((transaction, index) => (
-                <li key={index} className="p-4 border rounded-md shadow-sm bg-background/70">
-                  <div className="flex justify-between items-start mb-2">
-                    <p className="font-semibold text-primary">
-                      {format(transaction.date, 'dd MMM yyyy')}
-                    </p>
-                    <Badge variant="secondary">{formatCurrency(transaction.investedAmount)}</Badge>
+                <li key={index} className="p-4 border rounded-md shadow-sm bg-background/70 flex justify-between items-center">
+                  <div>
+                    <div className="flex items-center gap-4 mb-2">
+                      <p className="font-semibold text-primary">
+                        {format(transaction.date, 'dd MMM yyyy')}
+                      </p>
+                      <Badge variant="secondary">{formatCurrency(transaction.investedAmount)}</Badge>
+                    </div>
+                    <div className="text-sm space-y-1 text-muted-foreground">
+                      <p>Gold Rate: {formatCurrency(transaction.goldRate)}/g</p>
+                      <p>Gold Purchased: <span className="font-medium text-yellow-700">{formatNumber(transaction.goldPurchasedGrams, 3)} g</span></p>
+                    </div>
                   </div>
-                  <div className="text-sm space-y-1 text-muted-foreground">
-                    <p>Gold Rate: {formatCurrency(transaction.goldRate)}/g</p>
-                    <p>Gold Purchased: <span className="font-medium text-yellow-700">{formatNumber(transaction.goldPurchasedGrams, 3)} g</span></p>
-                  </div>
+                  <Button variant="outline" size="sm" onClick={() => setEditingTransaction({ transaction, index })}>
+                    <Edit className="mr-2 h-4 w-4" /> Edit
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -586,6 +631,16 @@ export default function SchemeDetailPage() {
           )}
         </CardContent>
       </Card>
+      
+      {editingTransaction && (
+          <EditTransactionDialog
+              isOpen={!!editingTransaction}
+              onClose={() => setEditingTransaction(null)}
+              transaction={editingTransaction.transaction}
+              onSave={handleUpdateTransaction}
+          />
+      )}
+
 
       <Card className="w-full shadow-xl">
         <CardHeader>
@@ -601,6 +656,7 @@ export default function SchemeDetailPage() {
               onInputChange={handleRedemptionInputChange}
               onCheckboxChange={handleRedemptionCheckboxChange}
               onSliderChange={handleRedemptionSliderChange}
+              onGoldRateUpdate={handleRedemptionGoldRateUpdate}
               onSubmit={handleSaveRedemption}
               isLoading={isSavingRedemption}
               maxMcDiscountCap={STANDARD_DISCOUNT_RATE_CAP * 100}

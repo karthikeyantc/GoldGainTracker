@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Coins, Weight, CircleDollarSign, Percent, CalculatorIcon, Sparkles, AlertTriangle } from 'lucide-react';
+import { LiveGoldPriceFetcher } from '@/components/shared/LiveGoldPriceFetcher';
 
 export interface CalculatorInputState {
   accumulatedGoldGrams: string;
@@ -21,6 +22,7 @@ interface CalculatorFormProps {
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onCheckboxChange: (checked: boolean) => void;
   onSliderChange: (value: number[]) => void;
+  onGoldRateUpdate: (rate: string) => void;
   onSubmit: () => void;
   isLoading?: boolean;
   maxMcDiscountCap: number; // To pass the 12% constant (MAKING_CHARGE_DISCOUNT_CAP_PERCENTAGE_OF_TOTAL_INVOICE * 100)
@@ -28,23 +30,24 @@ interface CalculatorFormProps {
 
 const iconProps = { className: "mr-2 h-4 w-4 text-accent" };
 
-export function CalculatorForm({ inputs, onInputChange, onCheckboxChange, onSliderChange, onSubmit, isLoading, maxMcDiscountCap }: CalculatorFormProps) {
+export function CalculatorForm({ inputs, onInputChange, onCheckboxChange, onSliderChange, onGoldRateUpdate, onSubmit, isLoading, maxMcDiscountCap }: CalculatorFormProps) {
   const inputFields = [
     { id: 'accumulatedGoldGrams', label: 'Your Accumulated Gold (g)', type: 'number', placeholder: 'e.g., 5.208g', value: inputs.accumulatedGoldGrams, icon: <Sparkles {...iconProps} /> },
     { id: 'intendedJewelleryWeight', label: 'Total Jewelry Weight Desired (g)', type: 'number', placeholder: 'e.g., 6.094g', value: inputs.intendedJewelleryWeight, icon: <Weight {...iconProps} /> },
-    { id: 'currentGoldPrice', label: 'Current Gold Rate (₹/gram)', type: 'number', placeholder: 'e.g., ₹7000', value: inputs.currentGoldPrice, icon: <CircleDollarSign {...iconProps} /> },
-    { id: 'makingChargePercentage', label: 'Making Charges Percentage (%)', type: 'number', placeholder: 'e.g., 18%', value: inputs.makingChargePercentage, icon: <Percent {...iconProps} /> },
   ];
+  
+  const makingChargeField = { id: 'makingChargePercentage', label: 'Making Charges Percentage (%)', type: 'number', placeholder: 'e.g., 18%', value: inputs.makingChargePercentage, icon: <Percent {...iconProps} /> };
 
   return (
     <div className="space-y-6">
       <h3 className="font-headline text-2xl font-semibold text-primary flex items-center">
         <Sparkles className="mr-2 h-6 w-6 text-primary" /> Your Gold Details
       </h3>
+      
       {inputFields.map(field => (
         <div key={field.id} className="space-y-2">
           <Label htmlFor={field.id} className="flex items-center text-foreground/80">
-            {/* Icon is part of the label for consistency */}
+            {field.icon}
             {field.label}
           </Label>
           <Input
@@ -56,10 +59,48 @@ export function CalculatorForm({ inputs, onInputChange, onCheckboxChange, onSlid
             onChange={onInputChange}
             className="bg-background/80 border-border focus:ring-primary"
             min="0"
-            step={field.id === 'accumulatedGoldGrams' || field.id === 'intendedJewelleryWeight' ? '0.001' : '0.01'}
+            step="0.001"
           />
         </div>
       ))}
+      
+       <div className="space-y-2">
+        <Label htmlFor="currentGoldPrice" className="flex items-center text-foreground/80">
+          <CircleDollarSign {...iconProps} />
+          Current Gold Rate (₹/gram)
+        </Label>
+        <Input
+          id="currentGoldPrice"
+          name="currentGoldPrice"
+          type="number"
+          placeholder="e.g., ₹7000"
+          value={inputs.currentGoldPrice}
+          onChange={onInputChange}
+          className="bg-background/80 border-border focus:ring-primary"
+          min="0"
+          step="0.01"
+        />
+        <LiveGoldPriceFetcher onPriceUpdate={onGoldRateUpdate} />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor={makingChargeField.id} className="flex items-center text-foreground/80">
+          {makingChargeField.icon}
+          {makingChargeField.label}
+        </Label>
+        <Input
+          id={makingChargeField.id}
+          name={makingChargeField.id}
+          type={makingChargeField.type}
+          placeholder={makingChargeField.placeholder}
+          value={makingChargeField.value}
+          onChange={onInputChange}
+          className="bg-background/80 border-border focus:ring-primary"
+          min="0"
+          step="0.01"
+        />
+      </div>
+
 
       <div className="space-y-4 p-4 border border-dashed border-accent/50 rounded-md bg-accent/5">
         <div className="flex items-center space-x-2">

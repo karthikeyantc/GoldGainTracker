@@ -37,6 +37,11 @@ export default function GoldenGainTrackerPage() {
     setCalculatorInputs(prev => ({ ...prev, [name]: value }));
     setCalculationResults(null);
   };
+  
+  const handleGoldRateUpdate = (rate: string) => {
+    setCalculatorInputs(prev => ({...prev, currentGoldPrice: rate}));
+    setCalculationResults(null);
+  }
 
   const handleCheckboxChange = (checked: boolean) => {
     setCalculatorInputs(prev => ({
@@ -150,7 +155,6 @@ export default function GoldenGainTrackerPage() {
     setIsCalculating(false);
   }, [calculatorInputs, toast]);
   
-  console.log('Pre-render log for GoldenGainTrackerPage');
   return (
     <div className="min-h-screen bg-background text-foreground p-4 md:p-8">
       <header className="text-center mb-12">
@@ -194,7 +198,6 @@ export default function GoldenGainTrackerPage() {
             <TabsTrigger value="calculator" className="text-lg py-3">
               <Calculator className="mr-2" /> Gold Value Calculator
             </TabsTrigger>
-            {/* AI Investment Forecast TabTrigger removed */}
           </TabsList>
 
           <TabsContent value="calculator">
@@ -210,6 +213,7 @@ export default function GoldenGainTrackerPage() {
                   onInputChange={handleCalculatorInputChange}
                   onCheckboxChange={handleCheckboxChange}
                   onSliderChange={handleSliderChange}
+                  onGoldRateUpdate={handleGoldRateUpdate}
                   onSubmit={performCalculations}
                   isLoading={isCalculating}
                   maxMcDiscountCap={STANDARD_DISCOUNT_RATE_CAP * 100}
@@ -226,7 +230,6 @@ export default function GoldenGainTrackerPage() {
             </Card>
           </TabsContent>
 
-          {/* AI Investment Forecast TabsContent removed */}
         </Tabs>
       </main>
 

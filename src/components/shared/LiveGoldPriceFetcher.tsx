@@ -43,7 +43,7 @@ export function LiveGoldPriceFetcher({ onPriceUpdate }: LiveGoldPriceFetcherProp
             onPriceUpdate(String(priceData.price));
             toast({
                 title: 'Price Updated',
-                description: 'The gold rate input has been updated with the fetched price.',
+                description: 'The Gold rate input has been updated with the fetched price.',
             });
         }
     }
